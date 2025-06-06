@@ -7,13 +7,13 @@ This document outlines the full roadmap and implementation tasks for the SalesPu
 
 ---
 
-## ✅ Phase 1: Core Platform
+## Phase 1: Core Platform
 
 ### Phase 1.1: Project Setup & Environment Configuration
 
 - [ ] Set up Vercel project with domain and staging environment  
-- [ ] Initialize Supabase project (DB, Auth, Edge Functions)  
-- [ ] Set up GitHub repo and CI integration  
+- [x] Initialize Supabase project (DB, Auth, Edge Functions)  
+- [x] Set up GitHub repo and CI integration  
 - [ ] Add secret environment variables for Supabase, Stripe, Mailgun  
 - [ ] Confirm Stripe dev account with product SKUs and test plans  
 - [ ] Configure Mailgun sandbox domain and test endpoint  
@@ -23,12 +23,13 @@ This document outlines the full roadmap and implementation tasks for the SalesPu
 
 ### Phase 1.2: Schema, Auth, and RLS
 
-- [ ] Build all core tables from `Database_Schema.md`  
-- [ ] Apply full RLS rules per role and organization  
-- [ ] Configure Supabase Auth with email/password login  
-- [ ] Implement secure session tokens (HttpOnly cookie)  
+- [x] Build all core tables from `Database_Schema.md`  
+- [x] Apply full RLS rules per role and organization  
+- [x] Configure Supabase Auth with email/password login  
+- [x] Configure Supabase Auth with social login providers (Google, Facebook, X/Twitter)
+- [x] Implement secure session tokens (HttpOnly cookie)  
 - [ ] Seed initial SIMs from `data/sims/*.yaml`  
-- [ ] Add feature flags table and initial values (global + per org + per user)
+- [x] Add feature flags table and initial values (global + per org + per user)
 
 ---
 
@@ -120,10 +121,10 @@ This document outlines the full roadmap and implementation tasks for the SalesPu
 
 ### Phase 1.9: UI & Styling
 
-- [ ] Apply Tailwind + UI system from `UI_Guide_and_Design_System.md`  
-- [ ] Style all pages mobile-first  
-- [ ] Ensure accessibility and semantic tags  
-- [ ] Componentize inputs, charts, modals, flags
+- [x] Apply Tailwind + UI system from `UI_Guide_and_Design_System.md`  
+- [x] Style all pages mobile-first  
+- [x] Ensure accessibility and semantic tags  
+- [x] Componentize inputs, charts, modals, flags
 
 ---
 
@@ -131,8 +132,8 @@ This document outlines the full roadmap and implementation tasks for the SalesPu
 
 - [ ] Add unit tests (80% coverage min)  
 - [ ] Add E2E tests for major flows (KPI, goal update, flag toggle, messaging)  
-- [ ] Linting + TypeScript checks  
-- [ ] CI workflow validation (GitHub Actions)  
+- [x] Linting + TypeScript checks  
+- [x] CI workflow validation (GitHub Actions)  
 - [ ] Pre-deploy tests on all branches
 
 ---
