@@ -1,0 +1,571 @@
+plans:
+  - id: free
+    name: Free
+    monthly_price: 0
+    included_users: 1
+    included_sims: 0
+    max_additional_users: 0
+    additional_user_price: null
+    additional_sim_price: null
+    sim_bundle_price: null
+    voice_ai_addons_included: 0
+    voice_ai_addon_eligible: false
+    voice_ai_addon_price: null
+    voice_ai_addon_bundle_price: null
+    voice_ai_addon_bundle_count: null
+    voice_ai_overage_price: null
+    # Phase 1 features only
+    features:
+      - goal_calculator
+      - activity_logging
+
+  - id: pro
+    name: Pro
+    monthly_price: 25
+    included_users: 1
+    included_sims: 1
+    max_additional_users: 0
+    additional_user_price: null
+    additional_sim_price: 10
+    sim_bundle_price: 25
+    voice_ai_addons_included: 0
+    voice_ai_addon_eligible: true     # Phase 2: eligible to purchase add-on
+    voice_ai_addon_price: 10
+    voice_ai_addon_bundle_price: 25
+    voice_ai_addon_bundle_count: 3
+    voice_ai_overage_price: 0.50
+    voice_ai_daily_minutes_limit: 30
+    voice_ai_monthly_minutes_limit: 900
+    features:
+      - goal_calculator
+      - activity_logging
+      - referral_modeling
+      - what_if_mode
+      - sim_tuning
+      - calendar_integration
+      - ai_coaching          # Placeholder for Phase 2
+
+  - id: team
+    name: Team
+    monthly_price: 100
+    included_users: 5
+    included_sims: 1
+    max_additional_users: 5
+    additional_user_price: 20
+    additional_sim_price: 10
+    sim_bundle_price: 25
+    voice_ai_addons_included: 1       # Phase 2: one add-on included
+    voice_ai_addon_eligible: true
+    voice_ai_addon_price: 10
+    voice_ai_addon_bundle_price: 25
+    voice_ai_addon_bundle_count: 3
+    voice_ai_overage_price: 0.50
+    voice_ai_daily_minutes_limit: 30
+    voice_ai_monthly_minutes_limit: 900
+    features:
+      - goal_calculator
+      - activity_logging
+      - referral_modeling
+      - what_if_mode
+      - sim_tuning
+      - calendar_integration
+      - ai_coaching          # Phase 2
+      - org_kpi_dashboard
+      - org_feature_toggle
+      - in_app_messaging
+
+  - id: enterprise
+    name: Enterprise
+    monthly_price: 300
+    included_users: 15
+    included_sims: 3
+    max_additional_users: null
+    additional_user_price: 20
+    additional_sim_price: 10
+    sim_bundle_price: 25
+    voice_ai_addons_included: 3       # Phase 2: three add-ons included
+    voice_ai_addon_eligible: true
+    voice_ai_addon_price: 10
+    voice_ai_addon_bundle_price: 25
+    voice_ai_addon_bundle_count: 3
+    voice_ai_overage_price: 0.50
+    voice_ai_daily_minutes_limit: 30
+    voice_ai_monthly_minutes_limit: 900
+    features:
+      - goal_calculator
+      - activity_logging
+      - referral_modeling
+      - what_if_mode
+      - sim_tuning
+      - calendar_integration
+      - ai_coaching          # Phase 2
+      - org_kpi_dashboard
+      - org_feature_toggle
+      - in_app_messaging
+      - platform_support
+      - sim_provisioning
+      - audit_logs
+      - impersonation_tools
+      - voice_ai_content_management
+
+voice_ai_config:
+  default_daily_minutes: 30
+  default_monthly_minutes: 900
+  overage_block_minutes: 15
+  overage_price_per_block: 0.50
+  individual_addon_price: 10
+  bundle_addon_price: 25
+  bundle_addon_count: 3
+  billing_cycle_type: "monthly"        # monthly or calendar_month
+  usage_reset_day: 1                   # day of month usage resets
+  grace_minutes: 5                     # grace before hard cutoff
+
+  content_access:
+    free:
+      personas: []
+      scenarios: []
+      objections: []
+      difficulty_levels: []
+      custom_content: false
+
+    pro:
+      personas:
+        - "global"
+      scenarios:
+        - "global"
+      objections:
+        - "global"
+      difficulty_levels:
+        - "new_rep"
+        - "developing_rep"
+      custom_content: false
+
+    team:
+      personas:
+        - "global"
+        - "organization"
+      scenarios:
+        - "global"
+        - "organization"
+      objections:
+        - "global"
+        - "organization"
+      difficulty_levels:
+        - "new_rep"
+        - "developing_rep"
+        - "experienced_rep"
+      custom_content: true
+
+    enterprise:
+      personas:
+        - "global"
+        - "organization"
+      scenarios:
+        - "global"
+        - "organization"
+      objections:
+        - "global"
+        - "organization"
+      difficulty_levels:
+        - "new_rep"
+        - "developing_rep"
+        - "experienced_rep"
+        - "veteran_rep"
+      custom_content: true
+
+  content_management_permissions:
+    platform_admin:
+      - create_global_personas
+      - edit_global_personas
+      - delete_global_personas
+      - create_global_scenarios
+      - edit_global_scenarios
+      - delete_global_scenarios
+      - create_global_objections
+      - edit_global_objections
+      - delete_global_objections
+      - edit_difficulty_settings
+      - view_all_analytics
+
+    superadmin:
+      - create_global_personas
+      - edit_global_personas
+      - delete_global_personas
+      - create_global_scenarios
+      - edit_global_scenarios
+      - delete_global_scenarios
+      - create_global_objections
+      - edit_global_objections
+      - delete_global_objections
+      - edit_difficulty_settings
+      - view_all_analytics
+      - manage_voice_ai_providers
+      - configure_voice_ai_settings
+
+    enterprise_admin:
+      - create_org_personas
+      - edit_org_personas
+      - delete_org_personas
+      - create_org_scenarios
+      - edit_org_scenarios
+      - delete_org_scenarios
+      - create_org_objections
+      - edit_org_objections
+      - delete_org_objections
+      - view_org_analytics
+      - assign_scenarios_to_users
+
+    enterprise_team_manager:
+      - view_org_personas
+      - view_org_scenarios
+      - view_org_objections
+      - view_team_analytics
+      - assign_scenarios_to_team
+
+    team_manager:
+      - view_org_personas
+      - view_org_scenarios
+      - view_org_objections
+      - view_team_analytics
+      - assign_scenarios_to_team
+
+voice_ai_difficulty_levels:
+  new_rep:
+    display_name: "New Rep (0-6 months)"
+    description: "Entry-level scenarios with basic objections and supportive AI guidance"
+    experience_months_min: 0
+    experience_months_max: 6
+    objection_frequency: 0.2
+    objection_complexity: "simple"
+    conversation_pace: "slow"
+    interruption_likelihood: 0.05
+    patience_level: "very_patient"
+    ai_assistance_level: "high_support"
+    typical_session_duration: 10
+    success_rate_threshold: 60.0
+    available_scenarios:
+      - warm_lead_intro
+      - basic_product_demo
+      - simple_objection_practice
+
+  developing_rep:
+    display_name: "Developing Rep (6-18 months)"
+    description: "Intermediate scenarios with moderate objections for developing sales skills"
+    experience_months_min: 6
+    experience_months_max: 18
+    objection_frequency: 0.4
+    objection_complexity: "moderate"
+    conversation_pace: "moderate"
+    interruption_likelihood: 0.15
+    patience_level: "patient"
+    ai_assistance_level: "moderate"
+    typical_session_duration: 15
+    success_rate_threshold: 70.0
+    available_scenarios:
+      - cold_calling_practice
+      - appointment_setting
+      - moderate_objection_handling
+      - discovery_call_practice
+
+  experienced_rep:
+    display_name: "Experienced Rep (18+ months)"
+    description: "Advanced scenarios with challenging objections for experienced representatives"
+    experience_months_min: 18
+    experience_months_max: 60
+    objection_frequency: 0.6
+    objection_complexity: "complex"
+    conversation_pace: "fast"
+    interruption_likelihood: 0.25
+    patience_level: "moderate"
+    ai_assistance_level: "challenging"
+    typical_session_duration: 20
+    success_rate_threshold: 80.0
+    available_scenarios:
+      - complex_objection_handling
+      - competitive_displacement
+      - closing_practice
+      - referral_requests
+      - negotiation_practice
+
+  veteran_rep:
+    display_name: "Veteran Rep (3+ years)"
+    description: "Expert-level scenarios with complex objections and minimal AI assistance"
+    experience_months_min: 36
+    experience_months_max: null
+    objection_frequency: 0.8
+    objection_complexity: "expert"
+    conversation_pace: "variable"
+    interruption_likelihood: 0.35
+    patience_level: "impatient"
+    ai_assistance_level: "expert"
+    typical_session_duration: 25
+    success_rate_threshold: 90.0
+    available_scenarios:
+      - c_suite_selling
+      - procurement_negotiations
+      - complex_multi_stakeholder
+      - advanced_closing_techniques
+      - mentor_mode_practice
+
+default_personas:
+  - id: analytical_buyer
+    name: "Analytical Buyer"
+    description: "Data-driven prospect who needs detailed information and proof"
+    personality_traits:
+      - analytical
+      - skeptical
+      - detail_oriented
+      - risk_averse
+    conversation_style:
+      speaking_pace: "slow"
+      formality: "high"
+      interruption_frequency: "low"
+      question_frequency: "high"
+    voice_settings:
+      voice_type: "professional_male"
+      pitch: "low"
+      speed: "0.9"
+      accent: "neutral"
+    objection_patterns:
+      - price_focused
+      - roi_questioning
+      - feature_comparison
+      - timeline_concerns
+
+  - id: relationship_buyer
+    name: "Relationship Buyer"
+    description: "People-focused prospect who values trust and relationships"
+    personality_traits:
+      - friendly
+      - collaborative
+      - trust_focused
+      - relationship_oriented
+    conversation_style:
+      speaking_pace: "moderate"
+      formality: "low"
+      interruption_frequency: "medium"
+      question_frequency: "medium"
+    voice_settings:
+      voice_type: "warm_female"
+      pitch: "medium"
+      speed: "1.0"
+      accent: "neutral"
+    objection_patterns:
+      - trust_concerns
+      - relationship_focused
+      - team_impact
+      - support_questions
+
+  - id: aggressive_buyer
+    name: "Aggressive Buyer"
+    description: "Direct, impatient prospect who challenges everything"
+    personality_traits:
+      - aggressive
+      - impatient
+      - direct
+      - challenging
+    conversation_style:
+      speaking_pace: "fast"
+      formality: "low"
+      interruption_frequency: "high"
+      question_frequency: "high"
+    voice_settings:
+      voice_type: "assertive_male"
+      pitch: "medium"
+      speed: "1.2"
+      accent: "neutral"
+    objection_patterns:
+      - price_aggressive
+      - time_pressure
+      - authority_challenges
+      - competitive_focused
+
+  - id: budget_conscious
+    name: "Budget-Conscious Buyer"
+    description: "Cost-focused prospect with limited budget and strict requirements"
+    personality_traits:
+      - cost_conscious
+      - cautious
+      - value_focused
+      - practical
+    conversation_style:
+      speaking_pace: "moderate"
+      formality: "medium"
+      interruption_frequency: "low"
+      question_frequency: "medium"
+    voice_settings:
+      voice_type: "practical_female"
+      pitch: "medium"
+      speed: "1.0"
+      accent: "neutral"
+    objection_patterns:
+      - budget_constraints
+      - value_questioning
+      - cost_comparison
+      - approval_process
+
+default_objections:
+  price:
+    - text: "Your solution is too expensive for our budget."
+      difficulty: "new_rep"
+      triggers:
+        - "price"
+        - "cost"
+        - "budget"
+        - "expensive"
+    - text: "I can get the same thing cheaper from your competitor."
+      difficulty: "developing_rep"
+      triggers:
+        - "cheaper"
+        - "competitor"
+        - "price comparison"
+    - text: "The ROI doesn't justify this investment given our current financial constraints."
+      difficulty: "experienced_rep"
+      triggers:
+        - "ROI"
+        - "investment"
+        - "financial constraints"
+    - text: "Our procurement process requires three quotes and you're 40% higher than the lowest bid."
+      difficulty: "veteran_rep"
+      triggers:
+        - "procurement"
+        - "quotes"
+        - "bidding"
+  timing:
+    - text: "This isn't the right time for us to make this decision."
+      difficulty: "new_rep"
+      triggers:
+        - "timing"
+        - "not ready"
+        - "later"
+    - text: "We need to wait until next quarter when our budget opens up."
+      difficulty: "developing_rep"
+      triggers:
+        - "next quarter"
+        - "budget cycle"
+        - "wait"
+    - text: "We're in the middle of a reorganization and can't take on new initiatives."
+      difficulty: "experienced_rep"
+      triggers:
+        - "reorganization"
+        - "initiatives"
+        - "busy"
+    - text: "Our fiscal year ends in two months and all major purchases are frozen."
+      difficulty: "veteran_rep"
+      triggers:
+        - "fiscal year"
+        - "frozen"
+        - "major purchases"
+  authority:
+    - text: "I need to talk to my manager before making any decisions."
+      difficulty: "new_rep"
+      triggers:
+        - "manager"
+        - "boss"
+        - "approval"
+    - text: "The decision will ultimately be made by our committee."
+      difficulty: "developing_rep"
+      triggers:
+        - "committee"
+        - "decision makers"
+        - "group decision"
+    - text: "I don't have budget authority for purchases over $10,000."
+      difficulty: "experienced_rep"
+      triggers:
+        - "budget authority"
+        - "spending limit"
+        - "approval level"
+    - text: "This requires board approval and they only meet quarterly."
+      difficulty: "veteran_rep"
+      triggers:
+        - "board approval"
+        - "quarterly meetings"
+        - "executive decision"
+  need:
+    - text: "I'm not sure we really need this solution."
+      difficulty: "new_rep"
+      triggers:
+        - "need"
+        - "necessary"
+        - "require"
+    - text: "Our current system works fine for what we need."
+      difficulty: "developing_rep"
+      triggers:
+        - "current system"
+        - "works fine"
+        - "satisfied"
+    - text: "We've managed without this type of solution for years."
+      difficulty: "experienced_rep"
+      triggers:
+        - "managed without"
+        - "years"
+        - "existing process"
+    - text: "Our internal team is developing a custom solution that will be more cost-effective."
+      difficulty: "veteran_rep"
+      triggers:
+        - "internal team"
+        - "custom solution"
+        - "build vs buy"
+  competition:
+    - text: "We're also looking at [Competitor Name]."
+      difficulty: "new_rep"
+      triggers:
+        - "competitor"
+        - "looking at"
+        - "comparing"
+    - text: "How do you compare to [Specific Competitor] in terms of features?"
+      difficulty: "developing_rep"
+      triggers:
+        - "compare to"
+        - "features"
+        - "competitive analysis"
+    - text: "We've been using [Competitor] for three years and they're offering a significant renewal discount."
+      difficulty: "experienced_rep"
+      triggers:
+        - "renewal discount"
+        - "existing vendor"
+        - "loyalty"
+    - text: "Your main competitor is proposing a phased implementation with risk mitigation guarantees."
+      difficulty: "veteran_rep"
+      triggers:
+        - "phased implementation"
+        - "risk mitigation"
+        - "guarantees"
+
+voice_ai_feature_flags:
+  voice_ai_basic_access:
+    plans:
+      - "pro"
+      - "team"
+      - "enterprise"
+    description: "Access to basic voice AI practice sessions"
+  voice_ai_persona_selection:
+    plans:
+      - "pro"
+      - "team"
+      - "enterprise"
+    description: "Ability to choose different customer personas"
+  voice_ai_difficulty_selection:
+    plans:
+      - "team"
+      - "enterprise"
+    description: "Access to different difficulty levels"
+  voice_ai_custom_scenarios:
+    plans:
+      - "team"
+      - "enterprise"
+    description: "Access to organization-specific scenarios"
+  voice_ai_analytics:
+    plans:
+      - "team"
+      - "enterprise"
+    description: "Detailed analytics and progress tracking"
+  voice_ai_content_management:
+    plans:
+      - "enterprise"
+    description: "Create and manage custom personas, scenarios, and objections"
+  voice_ai_team_management:
+    plans:
+      - "team"
+      - "enterprise"
+    description: "Assign scenarios and view team progress"

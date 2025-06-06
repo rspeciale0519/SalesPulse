@@ -1,0 +1,41 @@
+id: sim_insurance
+name: "Life Insurance Sales"
+slug: life-insurance
+status: active
+version: "1.0"
+
+conversion_model:
+  funnel:
+    - stage: call
+      label: Calls
+      conversion_rate: 0.25
+    - stage: appointment
+      label: Appointments
+      conversion_rate: 0.40
+    - stage: deal
+      label: "Deals Closed"
+      conversion_rate: 0.60
+
+  payout:
+    per_deal_amount: 1200
+    currency: USD
+
+  assumptions:
+    avg_call_duration_minutes: 6
+    avg_deals_per_client: 1
+    lead_referral_boost: 1.15
+    seasonality_factor: 1.0
+
+  tunable_parameters:
+    allow_user_override: true
+    editable_fields:
+      - "conversion_model.funnel[0].conversion_rate"
+      - "conversion_model.funnel[1].conversion_rate"
+      - "conversion_model.payout.per_deal_amount"
+      - "conversion_model.assumptions.lead_referral_boost"
+
+plan_visibility:
+  free: false
+  pro: true
+  team: true
+  enterprise: true
