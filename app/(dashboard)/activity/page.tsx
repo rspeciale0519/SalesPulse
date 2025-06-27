@@ -10,13 +10,13 @@ import { Badge } from "@/components/ui/badge"
 import { FileText, Plus, Edit, Trash2, Filter } from "lucide-react"
 import { useTheme } from "@/components/theme-provider"
 import { BulletproofInput } from "@/components/bulletproof-input"
-import { useFocusPreservation } from "@/hooks/use-focus-preservation"
+import { useEnhancedInput } from "@/hooks/use-enhanced-input"
 
 const ActivityLog = () => {
   const { actualTheme } = useTheme()
 
   // Initialize focus preservation
-  useFocusPreservation()
+  useEnhancedInput()
 
   // TODO: Fetch activities from Supabase
   // const { data: activities, loading } = useActivities(userId)

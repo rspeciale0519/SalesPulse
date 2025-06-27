@@ -31,7 +31,7 @@ interface WebhookEndpoint {
 }
 
 // TODO: Fetch webhooks from Supabase
-// const sampleWebhooks: WebhookEndpoint[] = []
+const sampleWebhooks: WebhookEndpoint[] = [
   {
     id: "1",
     name: "Slack Notifications",
@@ -63,7 +63,7 @@ const availableEvents = [
 export default function WebhooksPage() {
   const { actualTheme } = useTheme()
   // TODO: Initialize with real webhooks from Supabase
-  const [webhooks, setWebhooks] = useState<WebhookEndpoint[]>([])
+  const [webhooks, setWebhooks] = useState<WebhookEndpoint[]>(sampleWebhooks)
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [newWebhook, setNewWebhook] = useState({
     name: "",

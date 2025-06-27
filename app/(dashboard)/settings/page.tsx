@@ -10,13 +10,13 @@ import { Badge } from "@/components/ui/badge"
 import { Settings, User, Zap, Bell, Shield } from "lucide-react"
 import { useTheme } from "@/components/theme-provider"
 import { BulletproofInput } from "@/components/bulletproof-input"
-import { useFocusPreservation } from "@/hooks/use-focus-preservation"
+import { useEnhancedInput } from "@/hooks/use-enhanced-input"
 
 const SettingsPage = () => {
   const { actualTheme } = useTheme()
 
-  // Initialize focus preservation
-  useFocusPreservation()
+  // Initialize enhanced input
+  useEnhancedInput()
 
   // Simple string state
   const [workSchedule, setWorkSchedule] = useState({
