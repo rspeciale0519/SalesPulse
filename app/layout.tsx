@@ -2,11 +2,13 @@ import type React from "react"
 import type { Metadata } from "next"
 import "./globals.css"
 import { NavigationProvider } from "@/components/navigation-provider"
+import { ErrorBoundary } from "@/components/error-boundary"
 
 export const metadata: Metadata = {
-  title: "v0 App",
-  description: "Created with v0",
-  generator: "v0.dev",
+  title: "SalesPulse - Smart Sales Goal Tracking",
+  description: "Track and achieve your sales goals with intelligent automation and real-time insights",
+  keywords: "sales tracking, goal setting, CRM, sales automation, activity tracking",
+  authors: [{ name: "SalesPulse Team" }],
 }
 
 export default function RootLayout({
@@ -17,7 +19,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <NavigationProvider>{children}</NavigationProvider>
+        <ErrorBoundary>
+          <NavigationProvider>{children}</NavigationProvider>
+        </ErrorBoundary>
       </body>
     </html>
   )
