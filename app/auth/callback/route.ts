@@ -8,7 +8,8 @@ export async function GET(request: Request) {
   const requestUrl = new URL(request.url)
   const code = requestUrl.searchParams.get('code')
   
-  // Initialize Supabase client
+  // Initialize Supabase client with cookies helper for compatibility with Next.js 15+
+  // Using the original non-async approach to match what Supabase expects
   const cookieStore = cookies()
   const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
   

@@ -57,7 +57,7 @@ export const dashboardConfig: DashboardConfig = {
   sidebarNav: [
     {
       title: 'Dashboard',
-      href: '/',
+      href: '/dashboard',
       icon: LayoutDashboard,
     },
     {
