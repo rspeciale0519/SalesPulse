@@ -159,7 +159,7 @@ To use WindSurf AI as a solo developer:
 * Use the schema defined in `Database_Schema.md` to scaffold models  
 * Reference `Feature_Matrix_Reference.md` to guide conditional UI and access logic  
 * Follow `UI_Guide_and_Design_System.md` for Tailwind-compatible UI consistency  
-* See `Development_TODO.md` for a complete task list
+* See `Project_Plan.md` for a complete task list
 
 ---
 

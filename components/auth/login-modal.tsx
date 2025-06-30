@@ -2,7 +2,8 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogClose } from "@/components/ui/dialog"
+import { useEffect, useRef } from "react"
 import { LoginForm } from "./login-form"
 import { SignupForm } from "./signup-form"
 import { ForgotPasswordForm } from "./forgot-password-form"
@@ -18,6 +19,7 @@ export function LoginModal({ isOpen, onOpenChange }: LoginModalProps) {
   const [authView, setAuthView] = useState<AuthView>("login")
   const [twoFactorMethod, setTwoFactorMethod] = useState<TwoFactorAuthMethod | null>(null)
   const router = useRouter()
+  const initialFocusRef = useRef<HTMLElement | null>(null)
 
   const handleLoginSuccessWith2FA = (method: TwoFactorAuthMethod) => {
     setTwoFactorMethod(method)
@@ -72,6 +74,29 @@ export function LoginModal({ isOpen, onOpenChange }: LoginModalProps) {
     }
   }
 
+  // Handle keyboard navigation between forms
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Allow escape key to close modal
+      if (e.key === "Escape" && isOpen) {
+        onOpenChange(false)
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [isOpen, onOpenChange])
+
+  // Focus management when view changes
+  useEffect(() => {
+    if (isOpen && initialFocusRef.current) {
+      // Small delay to ensure the DOM is ready
+      setTimeout(() => {
+        initialFocusRef.current?.focus()
+      }, 50)
+    }
+  }, [isOpen, authView])
+
   return (
     <Dialog
       open={isOpen}
@@ -83,12 +108,20 @@ export function LoginModal({ isOpen, onOpenChange }: LoginModalProps) {
           setTwoFactorMethod(null)
         }
       }}
+      aria-labelledby="auth-dialog-title"
+      aria-describedby="auth-dialog-description"
     >
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[425px]" role="dialog" aria-modal="true">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-bold text-center">{getDialogTitle()}</DialogTitle>
-          <DialogDescription className="text-center">{getDialogDescription()}</DialogDescription>
+          <DialogTitle className="text-2xl font-bold text-center" id="auth-dialog-title">{getDialogTitle()}</DialogTitle>
+          <DialogDescription className="text-center" id="auth-dialog-description">{getDialogDescription()}</DialogDescription>
         </DialogHeader>
+        <DialogClose className="absolute right-4 top-4 opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground" aria-label="Close dialog">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+            <line x1="18" x2="6" y1="6" y2="18"></line>
+            <line x1="6" x2="18" y1="6" y2="18"></line>
+          </svg>
+        </DialogClose>
         {authView === "login" ? (
           <LoginForm
             setAuthView={setAuthView}

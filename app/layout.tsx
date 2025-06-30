@@ -18,7 +18,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body>
+      <body suppressHydrationWarning>
         <ErrorBoundary>
           <NavigationProvider>{children}</NavigationProvider>
         </ErrorBoundary>
