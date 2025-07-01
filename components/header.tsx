@@ -15,6 +15,7 @@ import { ThemeToggle } from "./theme-toggle"
 import { useTheme } from "./theme-provider" // Corrected import
 import Link from "next/link"
 import { useEffect } from "react" // Added useEffect for logging
+import { signOut } from "@/lib/actions/auth-actions"
 
 export function Header() {
   const { actualTheme } = useTheme()
@@ -99,7 +100,10 @@ export function Header() {
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator className={actualTheme === "dark" ? "bg-zinc-700" : "bg-gray-200"} />
-              <DropdownMenuItem className={`${dropdownItemColor} transition-colors duration-300 cursor-pointer`}>
+              <DropdownMenuItem 
+                onClick={() => signOut()} 
+                className={`${dropdownItemColor} transition-colors duration-300 cursor-pointer`}
+              >
                 Sign out
               </DropdownMenuItem>
             </DropdownMenuContent>
