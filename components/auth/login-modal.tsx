@@ -98,6 +98,8 @@ export function LoginModal({ isOpen, onOpenChange }: LoginModalProps) {
     }
   }, [isOpen, authView])
 
+  const [dialogTitleId, setDialogTitleId] = useState<string | undefined>(undefined);
+
   return (
     <Dialog
       open={isOpen}
@@ -109,10 +111,16 @@ export function LoginModal({ isOpen, onOpenChange }: LoginModalProps) {
           setTwoFactorMethod(null)
         }
       }}
-      aria-labelledby="auth-dialog-title"
+      aria-labelledby={dialogTitleId}
       aria-describedby="auth-dialog-description"
     >
-      <DialogContent className="sm:max-w-[425px]" role="dialog" aria-modal="true" title={getDialogTitle()}>
+      <DialogContent
+        className="sm:max-w-[425px]"
+        role="dialog"
+        aria-modal="true"
+        title={getDialogTitle()}
+        onTitleId={setDialogTitleId}
+      >
         <DialogHeader>
           <DialogDescription className="text-center" id="auth-dialog-description">{getDialogDescription()}</DialogDescription>
         </DialogHeader>

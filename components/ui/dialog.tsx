@@ -31,12 +31,21 @@ DialogOverlay.displayName = DialogPrimitive.Overlay.displayName
 
 interface DialogContentProps extends React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> {
   title?: string;
+  /**
+   * Optional callback to receive the generated title id for use in aria-labelledby on the dialog root.
+   */
+  onTitleId?: (id: string) => void;
 }
 
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   DialogContentProps
->(({ className, children, title, ...props }, ref) => {
+>(({ className, children, title, onTitleId, ...props }, ref) => {
+  // useId for SSR/CSR consistency
+  const titleId = React.useId();
+  React.useEffect(() => {
+    if (onTitleId) onTitleId(titleId);
+  }, [onTitleId, titleId]);
   return (
     <DialogPortal>
       <DialogOverlay />
@@ -49,9 +58,9 @@ const DialogContent = React.forwardRef<
         {...props}
       >
         {title ? (
-          <DialogPrimitive.Title className="text-2xl font-bold text-center" id="auth-dialog-title">{title}</DialogPrimitive.Title>
+          <DialogPrimitive.Title className="text-lg font-semibold leading-none tracking-tight" id={titleId}>{title}</DialogPrimitive.Title>
         ) : (
-          <DialogPrimitive.Title className="sr-only">Dialog</DialogPrimitive.Title>
+          <DialogPrimitive.Title className="sr-only" id={titleId}>Dialog</DialogPrimitive.Title>
         )}
         {children}
         <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
