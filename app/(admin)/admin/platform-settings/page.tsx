@@ -46,7 +46,7 @@ export default function PlatformSettingsPage() {
                   Regenerate
                 </Button>
               </div>
-              <p className="text-xs text-theme-muted mt-1">Used for server-to-server integrations.</p>
+              <p className="text-xs text-theme-muted mt-1">Used for server-to-server API access.</p>
             </div>
             <div className="flex items-center justify-between">
               <div>

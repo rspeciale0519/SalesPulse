@@ -7,11 +7,7 @@ import {
   LayoutDashboard,
   Calculator,
   FileText,
-  Plug,
   Settings,
-  Globe,
-  Key,
-  Webhook,
   ChevronDown,
   ChevronRight,
 } from 'lucide-react';
@@ -69,27 +65,6 @@ export const dashboardConfig: DashboardConfig = {
       title: 'Activity Log',
       href: '/activity',
       icon: FileText,
-    },
-    {
-      title: 'Integrations',
-      icon: Plug,
-      items: [
-        {
-          title: 'Browse Integrations',
-          href: '/integrations',
-          icon: Globe,
-        },
-        {
-          title: 'API Keys',
-          href: '/integrations/api-keys',
-          icon: Key,
-        },
-        {
-          title: 'Webhooks',
-          href: '/integrations/webhooks',
-          icon: Webhook,
-        },
-      ],
     },
     {
       title: 'Settings',

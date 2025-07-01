@@ -12,7 +12,7 @@ SalesPulse is a multi-tenant SaaS application built using a modern JAMstack appr
 * **Backend & Database:** Supabase (PostgreSQL, Auth, RLS, Edge Functions)  
 * **Edge/API Layer:** Supabase Edge Functions (Node.js) for custom business logic (e.g., billing webhooks, STT/TTS orchestration in Phase 2\)  
 * **Storage:** Supabase Storage (file uploads, transcripts)  
-* **Integrations:** Stripe (billing), Mailgun (email), Google Calendar (calendar), (Voice AI providers in Phase 2\)
+* **Third-Party Services:** Stripe (billing), Mailgun (email) - Core services only for MVP\)
 
 Traffic flow:
 
@@ -37,7 +37,7 @@ Traffic flow:
 
                              \+----------------------+--------------------+   \+--------------+
 
-                             |               Supabase Endpoint           |   | Integrations |
+                             |               Supabase Endpoint           |   | Third-Party  |
 
                              |  \- Auth (JWT, RLS)                         |   |  Services:   |
 
@@ -207,7 +207,7 @@ Refer to [Database\_Schema.md](http://./Database_Schema.md) for Phase 2 tables:
   * Only session owners and org admins can read session data.  
   * `voice_settings` read by all; update only by admins.
 
-### 4.6 Third-Party Integrations
+### 4.6 Third-Party Services (Phase 2)
 
 * **ElevenLabs (TTS):** API key in `ELEVENLABS_API_KEY`; use REST endpoint for streaming audio.  
 * **OpenAI (STT & GPT-4):** API key in `OPENAI_API_KEY`; stream transcriptions via WebSocket if supported, else chunked HTTP.  

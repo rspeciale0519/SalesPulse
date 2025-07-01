@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Badge } from "@/components/ui/badge"
-import { Settings, User, Zap, Bell, Shield } from "lucide-react"
+import { Settings, User, Bell, Shield } from "lucide-react"
 import { useTheme } from "@/components/theme-provider"
 import { BulletproofInput } from "@/components/bulletproof-input"
 import { useEnhancedInput } from "@/hooks/use-enhanced-input"
@@ -135,73 +135,6 @@ const SettingsPage = () => {
             <div className="space-y-2">
               <Label className="text-theme-secondary">Time Zone</Label>
               <Input type="text" defaultValue="EST (UTC-5)" className={getInputClasses()} maxLength={30} />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Integrations */}
-        <Card className="glass glass-hover rounded-xl gradient-border">
-          <CardHeader>
-            <CardTitle className="text-theme-primary flex items-center gap-2">
-              <Zap className="h-5 w-5" />
-              Integrations
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between p-4 glass glass-hover rounded-lg">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-red-600 rounded-lg flex items-center justify-center">
-                  <span className="text-white text-xs font-bold">RC</span>
-                </div>
-                <div>
-                  <p className="text-theme-primary font-medium">RingCentral</p>
-                  <p className="text-sm text-theme-muted">Call tracking & analytics</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Badge variant="secondary" className="text-xs">
-                  Connected
-                </Badge>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className={`glass ${
-                    actualTheme === "dark"
-                      ? "border-slate-600 text-theme-primary"
-                      : "border-gray-300 text-theme-primary"
-                  }`}
-                >
-                  Configure
-                </Button>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between p-4 glass glass-hover rounded-lg">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center">
-                  <span className="text-white text-xs font-bold">T</span>
-                </div>
-                <div>
-                  <p className="text-theme-primary font-medium">Twilio</p>
-                  <p className="text-sm text-theme-muted">SMS & communication</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Badge variant="outline" className="text-xs">
-                  Disconnected
-                </Badge>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className={`glass ${
-                    actualTheme === "dark"
-                      ? "border-slate-600 text-theme-primary"
-                      : "border-gray-300 text-theme-primary"
-                  }`}
-                >
-                  Connect
-                </Button>
-              </div>
             </div>
           </CardContent>
         </Card>

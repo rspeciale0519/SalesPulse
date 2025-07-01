@@ -229,7 +229,7 @@ This document outlines the testing strategy, test cases, and deployment procedur
 ### 4.4 Post-Deployment Validation
 
 * **Smoke Tests:** Verify key pages load (`/app/dashboard`, `/app/sims`, `/login`) and basic API endpoints respond.  
-* **Health Check:** Confirm Supabase and external integrations (Stripe, Mailgun) are reachable.  
+* **Health Check:** Confirm Supabase and core third-party services (Stripe, Mailgun) are reachable.  
 * **Feature Flag Check:** Ensure `FEATURE_VOICE_AI_ENABLED` is `false` in production until Phase 2 launch.
 
 ### 4.5 Rollback Procedures

@@ -28,7 +28,6 @@ const pricingPlans = [
     description: "For serious sales professionals",
     features: [
       "Everything in Starter",
-      "API integrations (RingCentral, Twilio)",
       "Advanced analytics",
       "Catch-up intelligence",
       "What-if scenarios",
@@ -49,7 +48,6 @@ const pricingPlans = [
       "Custom reporting",
       "API access",
       "Dedicated support",
-      "Custom integrations",
     ],
     popular: false,
   },
