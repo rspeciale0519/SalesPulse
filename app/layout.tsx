@@ -1,8 +1,7 @@
 import type React from "react"
 import type { Metadata } from "next"
 import "./globals.css"
-import { NavigationProvider } from "@/components/navigation-provider"
-import { ErrorBoundary } from "@/components/error-boundary"
+import { Providers } from "./providers"
 
 export const metadata: Metadata = {
   title: "SalesPulse - Smart Sales Goal Tracking",
@@ -19,9 +18,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body suppressHydrationWarning>
-        <ErrorBoundary>
-          <NavigationProvider>{children}</NavigationProvider>
-        </ErrorBoundary>
+        <Providers>{children}</Providers>
       </body>
     </html>
   )

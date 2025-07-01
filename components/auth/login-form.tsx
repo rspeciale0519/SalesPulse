@@ -14,9 +14,9 @@ import { Captcha } from "@/components/ui/captcha"
 // Import SVG icons directly for better control over official branding
 import type { Dispatch, SetStateAction } from "react"
 import type { AuthView, TwoFactorAuthMethod, User } from "@/types/auth" // Added User and TwoFactorAuthMethod
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
 import { useToast } from "@/components/ui/use-toast"
 import { authRateLimiter, getClientIdentifier } from "@/lib/rate-limiter"
+import { signInWithCredentials } from "@/lib/actions/auth-actions"
 
 interface LoginFormProps {
   setAuthView: Dispatch<SetStateAction<AuthView>>
@@ -40,8 +40,6 @@ const loginFormSchema = z.object({
 type LoginFormValues = z.infer<typeof loginFormSchema>
 
 export function LoginForm({ setAuthView, onLoginSuccessWith2FA, onLoginSuccessWithout2FA }: LoginFormProps) {
-  // Initialize Supabase client
-  const supabase = createClientComponentClient()
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(false)
   
@@ -70,23 +68,13 @@ export function LoginForm({ setAuthView, onLoginSuccessWith2FA, onLoginSuccessWi
   const handleSocialLogin = async (provider: "google" | "facebook" | "twitter") => {
     try {
       setIsLoading(true)
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider,
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-        },
+      // TODO: Implement social login with server action
+      // For now, show a message that social login is not implemented
+      toast({
+        variant: "destructive",
+        title: "Not Implemented",
+        description: `${provider} login is not yet implemented. Please use email/password login.`,
       })
-      
-      if (error) {
-        console.error(`${provider} login failed:`, error.message)
-        toast({
-          variant: "destructive",
-          title: "Authentication Error",
-          description: `${provider} login failed: ${error.message}`,
-        })
-      }
-      
-      // The redirect happens automatically, no need to do anything else
     } catch (err) {
       console.error(`Error during ${provider} login:`, err)
       toast({
@@ -133,14 +121,15 @@ export function LoginForm({ setAuthView, onLoginSuccessWith2FA, onLoginSuccessWi
     console.log("Login form submitted, attempting to authenticate...")
 
     try {
-      // Implement real authentication with Supabase
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      })
+      console.log('🔍 [LOGIN FORM] Calling server action signInWithCredentials...')
       
-      if (error) {
-        console.error("Login failed:", error.message)
+      // Use server action instead of direct Supabase client
+      const result = await signInWithCredentials({ email, password })
+      
+      console.log('🔍 [LOGIN FORM] Server action result:', result)
+      
+      if (!result.success) {
+        console.error('❌ [LOGIN FORM] Login failed:', result.error)
         
         // Record failed attempt for rate limiting
         const newRateLimitInfo = authRateLimiter.recordAttempt(identifier)
@@ -155,7 +144,7 @@ export function LoginForm({ setAuthView, onLoginSuccessWith2FA, onLoginSuccessWi
           setCaptchaVerified(false)
         }
         
-        let errorMessage = error.message || "Login failed. Please check your credentials."
+        let errorMessage = result.error || "Login failed. Please check your credentials."
         
         // Add rate limiting context to error message
         if (newRateLimitInfo.remainingAttempts > 0) {
@@ -175,6 +164,8 @@ export function LoginForm({ setAuthView, onLoginSuccessWith2FA, onLoginSuccessWi
         return
       }
       
+      console.log('✅ [LOGIN FORM] Login successful, user:', result.user)
+      
       // Clear rate limit and CAPTCHA state on successful login
       authRateLimiter.reset(identifier)
       setRateLimitInfo({ isBlocked: false, remainingAttempts: 5 })
@@ -182,14 +173,15 @@ export function LoginForm({ setAuthView, onLoginSuccessWith2FA, onLoginSuccessWi
       setShowCaptcha(false)
       setCaptchaVerified(false)
       
-      // Check if user has 2FA enabled in user metadata or profile
-      if (data.user?.user_metadata?.two_factor_enabled) {
-        onLoginSuccessWith2FA(data.user.user_metadata.two_factor_method as TwoFactorAuthMethod)
+      // Check if user has 2FA enabled
+      if (result.user?.twoFactorEnabled) {
+        onLoginSuccessWith2FA(result.user.twoFactorMethod || 'authenticator_app')
       } else {
         toast({
           title: "Success",
           description: "You have successfully logged in."
         })
+        console.log('🔍 [LOGIN FORM] Calling onLoginSuccessWithout2FA...')
         onLoginSuccessWithout2FA()
       }
     } catch (err) {

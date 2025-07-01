@@ -5,17 +5,46 @@ import { redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
 
 export async function forgotPassword(email: string): Promise<{ error?: string; success?: string }> {
-  const supabase = await createClient()
-  
-  const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/reset-password`
-  })
+  try {
+    // Use service role client to check if user exists
+    const { createServiceRole } = await import('@/lib/supabase/server')
+    const supabaseAdmin = await createServiceRole()
+    
+    // Check if user exists by querying the users table
+    const { data: userProfile, error: profileError } = await supabaseAdmin
+      .from('users')
+      .select('id, email')
+      .eq('email', email)
+      .single()
+    
+    // If user not found (PGRST116 is "not found" error code)
+    if (profileError && profileError.code === 'PGRST116') {
+      return { 
+        error: "No account found with this email address. Would you like to create a new account instead?" 
+      }
+    }
+    
+    // If there's a different error, log it but continue with standard flow
+    if (profileError) {
+      console.warn('Error checking user profile, continuing with standard flow:', profileError)
+    }
 
-  if (error) {
-    return { error: error.message }
+    // User exists (or we couldn't verify), proceed with password reset using regular client
+    const supabase = await createClient()
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/auth/reset-password`
+    })
+
+    if (error) {
+      console.error('Password reset error:', error)
+      return { error: error.message }
+    }
+
+    return { success: "Password reset link has been sent to your email address." }
+  } catch (err) {
+    console.error('Unexpected error during password reset:', err)
+    return { error: "An unexpected error occurred. Please try again later." }
   }
-
-  return { success: "If an account with this email exists, a password reset link has been sent." }
 }
 
 export async function verifyTwoFactorCode(
@@ -45,34 +74,79 @@ export async function signInWithCredentials(credentials: {
     twoFactorMethod?: "authenticator_app" | "sms" | "email"
   }
 }> {
+  console.log('🔍 [AUTH DEBUG] Starting sign-in process for:', credentials.email)
+  
   const supabase = await createClient()
+  console.log('🔍 [AUTH DEBUG] Supabase client created')
 
   const { data, error } = await supabase.auth.signInWithPassword({
     email: credentials.email,
     password: credentials.password,
   })
 
+  console.log('🔍 [AUTH DEBUG] Sign-in attempt result:')
+  console.log('   - Error:', error ? error.message : 'None')
+  console.log('   - User exists:', !!data.user)
+  console.log('   - Session exists:', !!data.session)
+
   if (error) {
+    console.error('❌ [AUTH DEBUG] Sign-in error:', error)
+    // Provide more specific error messages
+    if (error.message.includes('Invalid login credentials')) {
+      return { success: false, error: "Invalid email or password. Please check your credentials and try again." }
+    } else if (error.message.includes('Email not confirmed')) {
+      return { success: false, error: "Please check your email and click the confirmation link before signing in." }
+    } else if (error.message.includes('Too many requests')) {
+      return { success: false, error: "Too many login attempts. Please wait a few minutes before trying again." }
+    }
     return { success: false, error: error.message }
   }
 
   if (!data.user) {
+    console.error('❌ [AUTH DEBUG] No user returned from sign-in')
     return { success: false, error: "Invalid email or password." }
   }
 
+  console.log('✅ [AUTH DEBUG] User signed in successfully:')
+  console.log('   - User ID:', data.user.id)
+  console.log('   - Email:', data.user.email)
+  console.log('   - Email confirmed:', data.user.email_confirmed_at)
+  console.log('   - Session access token:', data.session?.access_token ? 'Present' : 'Missing')
+  console.log('   - Session expires at:', data.session?.expires_at)
+
+  // Check session immediately after sign-in
+  const { data: { session: currentSession }, error: sessionError } = await supabase.auth.getSession()
+  console.log('🔍 [AUTH DEBUG] Session check after sign-in:')
+  console.log('   - Session error:', sessionError ? sessionError.message : 'None')
+  console.log('   - Current session exists:', !!currentSession)
+  console.log('   - Session user ID:', currentSession?.user?.id)
+
   // Get additional user profile data
-  const { data: profile } = await supabase
+  console.log('🔍 [AUTH DEBUG] Fetching user profile...')
+  const { data: profile, error: profileError } = await supabase
     .from('users')
-    .select('full_name, role, org_id')
+    .select('name, role, org_id')
     .eq('id', data.user.id)
     .single()
+
+  if (profileError) {
+    console.error('❌ [AUTH DEBUG] Error fetching user profile:', profileError)
+    // Still allow login even if profile fetch fails
+  } else {
+    console.log('✅ [AUTH DEBUG] Profile fetched successfully:')
+    console.log('   - Name:', profile.name)
+    console.log('   - Role:', profile.role)
+    console.log('   - Org ID:', profile.org_id)
+  }
+
+  console.log('✅ [AUTH DEBUG] Sign-in action completed successfully')
 
   return {
     success: true,
     user: {
       id: data.user.id,
       email: data.user.email!,
-      name: profile?.full_name || data.user.email!,
+      name: profile?.name || data.user.email!,
       twoFactorEnabled: false, // 2FA not implemented in Phase 1
     },
   }
@@ -96,9 +170,11 @@ export async function signUpWithCredentials(credentials: {
     password: credentials.password,
     options: {
       data: {
-        full_name: credentials.name,
+        name: credentials.name,  // Changed from 'full_name' to 'name' to match schema
+        full_name: credentials.name,  // Keep both for compatibility
         organization_name: credentials.organizationName,
-      }
+      },
+      emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/auth/callback?type=signup`
     }
   })
 

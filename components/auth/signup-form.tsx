@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import type { Dispatch, SetStateAction } from "react"
 import type { AuthView } from "@/types/auth" 
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
+import { signUpWithCredentials } from "@/lib/actions/auth-actions"
 
 interface SignupFormProps {
   setAuthView: Dispatch<SetStateAction<AuthView>> 
@@ -16,9 +16,7 @@ interface SignupFormProps {
 export function SignupForm({ setAuthView }: SignupFormProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  
-  // Initialize Supabase client
-  const supabase = createClientComponentClient()
+  const [success, setSuccess] = useState<string | null>(null)
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -40,30 +38,31 @@ export function SignupForm({ setAuthView }: SignupFormProps) {
     }
     
     try {
-      // Sign up with Supabase Auth
-      const { data, error } = await supabase.auth.signUp({
+      // Use our server action for signup with proper confirmation URL
+      const result = await signUpWithCredentials({
         email,
         password,
-        options: {
-          data: {
-            first_name: firstName,
-            last_name: lastName,
-          }
-        }
+        name: `${firstName} ${lastName}`.trim(),
+        organizationName: undefined // Let it default to "Personal Organization"
       })
       
-      if (error) {
-        throw error
+      if (!result.success) {
+        setError(result.error || "An error occurred during signup")
+        return
       }
       
-      // Success
-      console.log("Sign up successful", data)
-      // Switch to verification view or login view based on your app flow
-      setAuthView("login")
+      // Success - show confirmation message
+      setSuccess("Account created successfully! Please check your email for a confirmation link.")
+      setError(null)
+      
+      // Optionally switch to login view after a delay
+      setTimeout(() => {
+        setAuthView("login")
+      }, 3000)
       
     } catch (err: any) {
       console.error("Signup error:", err)
-      setError(err.message || "An error occurred during signup")
+      setError(err.message || "An unexpected error occurred during signup")
     } finally {
       setLoading(false)
     }
@@ -74,6 +73,11 @@ export function SignupForm({ setAuthView }: SignupFormProps) {
       {error && (
         <div className="p-3 bg-red-100 border border-red-400 text-red-700 rounded">
           {error}
+        </div>
+      )}
+      {success && (
+        <div className="p-3 bg-green-100 border border-green-400 text-green-700 rounded">
+          {success}
         </div>
       )}
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -87,7 +91,15 @@ export function SignupForm({ setAuthView }: SignupFormProps) {
         </div>
         <div>
           <Label htmlFor="email">Email</Label>
-          <Input id="email" name="email" type="email" placeholder="m@example.com" required />
+          <Input 
+            id="email" 
+            name="email" 
+            type="email" 
+            placeholder="m@example.com" 
+            pattern="[^@\s]+@[^@\s]+\.[^@\s]+"
+            title="Please enter a valid email address"
+            required 
+          />
         </div>
         <div>
           <Label htmlFor="password">Password</Label>

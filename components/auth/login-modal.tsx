@@ -118,6 +118,7 @@ export function LoginModal({ isOpen, onOpenChange }: LoginModalProps) {
         {/* DialogTitle must be a direct child of DialogContent for accessibility */}
         <DialogTitle className="sr-only">{getDialogTitle()}</DialogTitle>
         <DialogHeader>
+          <h2 className="text-lg font-semibold leading-none tracking-tight w-full text-center">{getDialogTitle()}</h2>
           <DialogDescription className="text-center">{getDialogDescription()}</DialogDescription>
         </DialogHeader>
 
