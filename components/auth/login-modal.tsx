@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogClose } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogClose } from "@/components/ui/dialog"
 import * as DialogPrimitive from "@radix-ui/react-dialog"
 import { useEffect, useRef } from "react"
 import { LoginForm } from "./login-form"
@@ -98,8 +98,6 @@ export function LoginModal({ isOpen, onOpenChange }: LoginModalProps) {
     }
   }, [isOpen, authView])
 
-  const [dialogTitleId, setDialogTitleId] = useState<string | undefined>(undefined);
-
   return (
     <Dialog
       open={isOpen}
@@ -111,18 +109,16 @@ export function LoginModal({ isOpen, onOpenChange }: LoginModalProps) {
           setTwoFactorMethod(null)
         }
       }}
-      aria-labelledby={dialogTitleId}
-      aria-describedby="auth-dialog-description"
     >
       <DialogContent
         className="sm:max-w-[425px]"
         role="dialog"
         aria-modal="true"
-        title={getDialogTitle()}
-        onTitleId={setDialogTitleId}
       >
+        {/* DialogTitle must be a direct child of DialogContent for accessibility */}
+        <DialogTitle className="sr-only">{getDialogTitle()}</DialogTitle>
         <DialogHeader>
-          <DialogDescription className="text-center" id="auth-dialog-description">{getDialogDescription()}</DialogDescription>
+          <DialogDescription className="text-center">{getDialogDescription()}</DialogDescription>
         </DialogHeader>
 
         {authView === "login" ? (
