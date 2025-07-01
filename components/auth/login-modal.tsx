@@ -112,8 +112,7 @@ export function LoginModal({ isOpen, onOpenChange }: LoginModalProps) {
       aria-labelledby="auth-dialog-title"
       aria-describedby="auth-dialog-description"
     >
-      <DialogContent className="sm:max-w-[425px]" role="dialog" aria-modal="true">
-        <DialogPrimitive.Title className="text-2xl font-bold text-center" id="auth-dialog-title">{getDialogTitle()}</DialogPrimitive.Title>
+      <DialogContent className="sm:max-w-[425px]" role="dialog" aria-modal="true" title={getDialogTitle()}>
         <DialogHeader>
           <DialogDescription className="text-center" id="auth-dialog-description">{getDialogDescription()}</DialogDescription>
         </DialogHeader>
