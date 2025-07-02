@@ -16,7 +16,7 @@ import type { Dispatch, SetStateAction } from "react"
 import type { AuthView, TwoFactorAuthMethod, User } from "@/types/auth" // Added User and TwoFactorAuthMethod
 import { useToast } from "@/components/ui/use-toast"
 import { authRateLimiter, getClientIdentifier } from "@/lib/rate-limiter"
-import { signInWithCredentials } from "@/lib/actions/auth-actions"
+import { signInWithCredentials, signInWithOAuth } from "@/lib/actions/auth-actions"
 
 interface LoginFormProps {
   setAuthView: Dispatch<SetStateAction<AuthView>>
@@ -68,19 +68,26 @@ export function LoginForm({ setAuthView, onLoginSuccessWith2FA, onLoginSuccessWi
   const handleSocialLogin = async (provider: "google" | "facebook" | "twitter") => {
     try {
       setIsLoading(true)
-      // TODO: Implement social login with server action
-      // For now, show a message that social login is not implemented
-      toast({
-        variant: "destructive",
-        title: "Not Implemented",
-        description: `${provider} login is not yet implemented. Please use email/password login.`,
-      })
+      
+      // Call the server action for OAuth login
+      const result = await signInWithOAuth(provider)
+      
+      if (!result.success && result.error) {
+        toast({
+          variant: "destructive",
+          title: "Login Error",
+          description: result.error,
+        })
+      }
+      // If successful, the server action will redirect to the OAuth provider
+      // and then back to our callback URL
+      
     } catch (err) {
       console.error(`Error during ${provider} login:`, err)
       toast({
         variant: "destructive",
-        title: "Authentication Error",
-        description: "An unexpected error occurred. Please try again later.",
+        title: "Login Error",
+        description: "An error occurred during social login. Please try again.",
       })
     } finally {
       setIsLoading(false)

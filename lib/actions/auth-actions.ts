@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
+import { checkExistingAccount, generateSocialLoginErrorMessage } from '@/lib/utils/auth-helpers'
 
 export async function forgotPassword(email: string): Promise<{ error?: string; success?: string }> {
   try {
@@ -162,6 +163,35 @@ export async function signUpWithCredentials(credentials: {
   error?: string
   user?: { id: string; email: string; name: string }
 }> {
+  // Check if account already exists with social login providers
+  try {
+    const existingAccount = await checkExistingAccount(credentials.email)
+    
+    // Handle errors from account checking
+    if (existingAccount.error) {
+      console.error('Account check failed:', existingAccount.error)
+      // Continue with signup process if check fails - better to allow signup than block legitimate users
+      // Log the specific error type for monitoring
+      if (existingAccount.error.type === 'PERMISSION_ERROR') {
+        console.warn('Permission error during account check - may need to review service role permissions')
+      }
+    } else if (existingAccount.exists) {
+      // Filter out 'email' provider to get only social providers
+      const socialProviders = existingAccount.providers.filter(provider => provider !== 'email')
+      
+      if (socialProviders.length > 0) {
+        // Account exists with social login providers - prevent signup
+        const errorMessage = generateSocialLoginErrorMessage(socialProviders)
+        return { success: false, error: errorMessage }
+      }
+      
+      // Account exists but only with email/password - let Supabase handle the duplicate email error
+    }
+  } catch (checkError) {
+    console.error('Unexpected error during account check:', checkError)
+    // Continue with signup process if check fails - better to allow signup than block legitimate users
+  }
+  
   const supabase = await createClient()
 
   // Sign up the user
@@ -194,6 +224,28 @@ export async function signUpWithCredentials(credentials: {
       name: credentials.name || data.user.email!,
     },
   }
+}
+
+export async function signInWithOAuth(provider: 'google' | 'facebook' | 'twitter') {
+  const supabase = await createClient()
+  
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider,
+    options: {
+      redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/auth/callback?type=social`
+    }
+  })
+  
+  if (error) {
+    console.error(`Error during ${provider} OAuth:`, error)
+    return { success: false, error: error.message }
+  }
+  
+  if (data.url) {
+    redirect(data.url)
+  }
+  
+  return { success: true }
 }
 
 export async function signOut() {
