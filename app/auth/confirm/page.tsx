@@ -13,6 +13,16 @@ export default function ConfirmPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
 
+  // Reusable function to handle automatic redirect to dashboard
+  const setupDashboardRedirect = () => {
+    const redirectTimer = setTimeout(() => {
+      router.push('/dashboard')
+    }, 2000)
+    
+    // Return cleanup function
+    return () => clearTimeout(redirectTimer)
+  }
+
   useEffect(() => {
     const type = searchParams.get('type')
     const error = searchParams.get('error')
@@ -24,12 +34,18 @@ export default function ConfirmPage() {
     } else if (type === 'signup') {
       setStatus('success')
       setMessage('Your email has been confirmed successfully!')
+      
+      // Setup automatic redirect to dashboard
+      return setupDashboardRedirect()
     } else {
       // Default success state for email confirmation
       setStatus('success')
       setMessage('Your email has been confirmed successfully!')
+      
+      // Setup automatic redirect to dashboard
+      return setupDashboardRedirect()
     }
-  }, [searchParams])
+  }, [searchParams, router])
 
   const handleLoginRedirect = () => {
     router.push('/?login=true')
@@ -40,7 +56,7 @@ export default function ConfirmPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-red-50 bg-opacity-80 p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
@@ -66,8 +82,12 @@ export default function ConfirmPage() {
         <CardContent className="space-y-4">
           {status === 'success' && (
             <>
-              <p className="text-sm text-gray-600 text-center">
-                Welcome to SalesPulse! Your account is now active and ready to use.
+              <div className="text-sm text-gray-600 text-center">
+                <p>Welcome to SalesPulse!</p>
+                <p>Your account is now active and ready to use.</p>
+              </div>
+              <p className="text-xs text-blue-600 text-center font-medium">
+                Redirecting to dashboard in a moment...
               </p>
               <div className="space-y-2">
                 <Button 
@@ -76,14 +96,6 @@ export default function ConfirmPage() {
                   size="lg"
                 >
                   Go to Dashboard
-                </Button>
-                <Button 
-                  onClick={handleLoginRedirect}
-                  variant="outline"
-                  className="w-full"
-                  size="lg"
-                >
-                  Sign In
                 </Button>
               </div>
             </>
