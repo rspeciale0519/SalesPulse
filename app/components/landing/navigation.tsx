@@ -43,7 +43,7 @@ export function Navigation({ onLoginClick }: NavigationProps) {
               className="text-theme-secondary hover:text-theme-primary"
               onClick={onLoginClick}
             >
-              Login
+              Login or Sign Up
             </Button>
             <Button className="gradient-primary hover:opacity-90">Start Free Trial</Button>
           </div>

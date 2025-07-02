@@ -108,14 +108,14 @@ export async function GET(request: Request) {
       // New user signup confirmation - redirect to confirmation page
       return NextResponse.redirect(new URL('/auth/confirm?type=signup', requestUrl.origin))
     } else {
-      // Existing user login - redirect to dashboard
+      // Existing user login or social login - redirect to dashboard
       return NextResponse.redirect(new URL('/dashboard', requestUrl.origin))
     }
   } else {
     // Not authenticated or error occurred
     if (code) {
       // There was a code but session creation failed - show error on confirmation page
-      return NextResponse.redirect(new URL('/auth/confirm?error=session_failed&error_description=Failed to create session. Please try signing in again.', requestUrl.origin))
+      return NextResponse.redirect(new URL('/auth/confirm?error=session_failed&error_description=Failed to create session. Please try again.', requestUrl.origin))
     } else {
       // No code provided - redirect to home
       return NextResponse.redirect(new URL('/', requestUrl.origin))

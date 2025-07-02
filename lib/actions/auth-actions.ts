@@ -226,27 +226,10 @@ export async function signUpWithCredentials(credentials: {
   }
 }
 
-export async function signInWithOAuth(provider: 'google' | 'facebook' | 'twitter') {
-  const supabase = await createClient()
-  
-  const { data, error } = await supabase.auth.signInWithOAuth({
-    provider,
-    options: {
-      redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/auth/callback?type=social`
-    }
-  })
-  
-  if (error) {
-    console.error(`Error during ${provider} OAuth:`, error)
-    return { success: false, error: error.message }
-  }
-  
-  if (data.url) {
-    redirect(data.url)
-  }
-  
-  return { success: true }
-}
+// OAuth sign-in is now handled client-side in components/auth/login-form.tsx
+// This server action has been removed to avoid Next.js server action security restrictions
+// during OAuth redirects. Client-side implementation provides better user experience
+// and avoids cross-origin redirect issues with server actions.
 
 export async function signOut() {
   const supabase = await createClient()

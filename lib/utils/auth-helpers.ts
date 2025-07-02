@@ -91,10 +91,7 @@ function detectProvidersFromUserData(user: SupabaseUser): string[] {
       for (const [provider, patterns] of Object.entries(PROVIDER_URL_PATTERNS)) {
         const hasMatch = patterns.some(pattern => pictureUrl.includes(pattern))
         if (hasMatch) {
-          // Special case: Google requires email_verified for more reliable detection
-          if (provider === 'google' && !userMetadata.email_verified) {
-            continue
-          }
+          // Provider detected from picture URL pattern
           return [provider]
         }
       }
@@ -129,16 +126,27 @@ export async function checkExistingAccount(email: string): Promise<ExistingAccou
     let existingUser: SupabaseUser | null = null
     let lookupError: any = null
     
-    // Attempt direct getUserByEmail if available
+    // Type guard to check if getUserByEmail method exists
+    function hasGetUserByEmail(adminAuth: any): adminAuth is { getUserByEmail: (email: string) => Promise<{ data: { user: SupabaseUser } | null, error: any }> } {
+      return adminAuth && typeof adminAuth.getUserByEmail === 'function'
+    }
+    
+    // Attempt direct getUserByEmail if available (with proper type checking)
     try {
-      const { data: userData, error: userError } = await (supabaseAdmin.auth.admin as any).getUserByEmail?.(email)
-      if (userError) {
-        lookupError = userError
-      } else if (userData?.user) {
-        existingUser = userData.user as SupabaseUser
+      const adminAuth = supabaseAdmin.auth.admin
+      if (hasGetUserByEmail(adminAuth)) {
+        const { data: userData, error: userError } = await adminAuth.getUserByEmail(email)
+        if (userError) {
+          lookupError = userError
+        } else if (userData?.user) {
+          existingUser = userData.user as SupabaseUser
+        }
+      } else {
+        // Method doesn't exist, set error to trigger fallback
+        lookupError = new Error('getUserByEmail method not available')
       }
     } catch (directLookupError) {
-      // Method might not exist, fall back to database query
+      // Method call failed, fall back to database query
       lookupError = directLookupError
     }
     
@@ -153,25 +161,62 @@ export async function checkExistingAccount(email: string): Promise<ExistingAccou
           .limit(1)
         
         if (dbError) {
-          // If direct DB query fails, fall back to limited listUsers as last resort
-          const { data: authUsers, error: authError } = await supabaseAdmin.auth.admin.listUsers({
-            page: 1,
-            perPage: 1000 // Only fetch first page as fallback
+          // If direct DB query fails, fall back to paginated listUsers as last resort
+          console.warn('⚠️ [AUTH HELPERS] Falling back to listUsers due to database query failure. This may indicate a configuration issue.', {
+            email,
+            dbError: dbError.message,
+            timestamp: new Date().toISOString()
           })
           
-          if (authError) {
-            return {
-              exists: false,
-              providers: [],
-              error: {
-                type: 'SUPABASE_ERROR',
-                message: 'Failed to lookup user by email',
-                details: authError
+          // Implement pagination to check all users until found or all pages exhausted
+          let currentPage = 1
+          const perPage = 50
+          let foundUser: SupabaseUser | null = null
+          
+          while (!foundUser) {
+            const { data: authUsers, error: authError } = await supabaseAdmin.auth.admin.listUsers({
+              page: currentPage,
+              perPage
+            })
+            
+            if (authError) {
+              console.error('⚠️ [AUTH HELPERS] Error during paginated user lookup:', authError)
+              return {
+                exists: false,
+                providers: [],
+                error: {
+                  type: 'SUPABASE_ERROR',
+                  message: 'Failed to lookup user by email during pagination',
+                  details: authError
+                }
               }
+            }
+            
+            // Check if user exists in current page
+            foundUser = authUsers.users.find(user => user.email === email) as SupabaseUser || null
+            
+            // If user found, break out of loop
+            if (foundUser) {
+              console.log(`✅ [AUTH HELPERS] User found on page ${currentPage} of ${Math.ceil(authUsers.total / perPage)}`)
+              break
+            }
+            
+            // If we've reached the last page and no user found, break
+            if (authUsers.users.length < perPage || currentPage * perPage >= authUsers.total) {
+              console.log(`🔍 [AUTH HELPERS] User not found after checking ${currentPage} pages (${authUsers.total} total users)`)
+              break
+            }
+            
+            currentPage++
+            
+            // Safety limit to prevent infinite loops (max 100 pages = 5000 users)
+            if (currentPage > 100) {
+              console.warn('⚠️ [AUTH HELPERS] Pagination safety limit reached (100 pages). Stopping search.')
+              break
             }
           }
           
-          existingUser = authUsers.users.find(user => user.email === email) as SupabaseUser || null
+          existingUser = foundUser
         } else if (dbUsers && dbUsers.length > 0) {
           existingUser = dbUsers[0] as SupabaseUser
         }

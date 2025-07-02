@@ -16,7 +16,8 @@ import type { Dispatch, SetStateAction } from "react"
 import type { AuthView, TwoFactorAuthMethod, User } from "@/types/auth" // Added User and TwoFactorAuthMethod
 import { useToast } from "@/components/ui/use-toast"
 import { authRateLimiter, getClientIdentifier } from "@/lib/rate-limiter"
-import { signInWithCredentials, signInWithOAuth } from "@/lib/actions/auth-actions"
+import { signInWithCredentials } from "@/lib/actions/auth-actions"
+import { createClient } from "@/lib/supabase/client"
 
 interface LoginFormProps {
   setAuthView: Dispatch<SetStateAction<AuthView>>
@@ -69,28 +70,38 @@ export function LoginForm({ setAuthView, onLoginSuccessWith2FA, onLoginSuccessWi
     try {
       setIsLoading(true)
       
-      // Call the server action for OAuth login
-      const result = await signInWithOAuth(provider)
+      // Use client-side Supabase to avoid Next.js Server Actions security restrictions
+      const supabase = createClient()
       
-      if (!result.success && result.error) {
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback?type=social`
+        }
+      })
+      
+      if (error) {
+        console.error(`Error during ${provider} OAuth:`, error)
+        setIsLoading(false)
         toast({
           variant: "destructive",
           title: "Login Error",
-          description: result.error,
+          description: error.message,
         })
+        return
       }
-      // If successful, the server action will redirect to the OAuth provider
-      // and then back to our callback URL
+      
+      // If successful, the browser will redirect to the OAuth provider
+      // Don't reset loading state here as we're about to redirect
       
     } catch (err) {
       console.error(`Error during ${provider} login:`, err)
+      setIsLoading(false)
       toast({
         variant: "destructive",
         title: "Login Error",
         description: "An error occurred during social login. Please try again.",
       })
-    } finally {
-      setIsLoading(false)
     }
   }
   const onSubmit = async (data: LoginFormValues) => {
