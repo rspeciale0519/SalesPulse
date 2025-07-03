@@ -68,12 +68,13 @@ export function Captcha({ onVerify, isRequired = false, className = '' }: Captch
   }, [generateQuestion])
 
   // Verify user input
-  const handleVerification = useCallback(() => {
-    const userAnswer = parseInt(userInput.trim())
+  const handleVerification = useCallback((input?: string) => {
+    const currentInput = input ?? userInput
+    const userAnswer = parseInt(currentInput.trim())
     const isCorrect = userAnswer === correctAnswer
     
     setIsVerified(isCorrect)
-    setAnswer(userInput)
+    setAnswer(currentInput)
     onVerify(isCorrect)
     
     if (!isCorrect) {
@@ -89,14 +90,9 @@ export function Captcha({ onVerify, isRequired = false, className = '' }: Captch
     const value = e.target.value
     setUserInput(value)
     
-    // Auto-verify when user enters a number
+    // Attempt verification immediately if numeric input
     if (value.trim() && !isNaN(parseInt(value.trim()))) {
-      // Small delay to allow user to finish typing
-      setTimeout(() => {
-        if (value === userInput) {
-          handleVerification()
-        }
-      }, 500)
+      handleVerification(value)
     }
   }
 

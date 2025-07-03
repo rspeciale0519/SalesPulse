@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -16,7 +16,7 @@ import type { Dispatch, SetStateAction } from "react"
 import type { AuthView, TwoFactorAuthMethod, User } from "@/types/auth" // Added User and TwoFactorAuthMethod
 import { useToast } from "@/components/ui/use-toast"
 import { authRateLimiter, getClientIdentifier } from "@/lib/rate-limiter"
-import { signInWithCredentials } from "@/lib/actions/auth-actions"
+import { signInWithCredentials, requestAccountUnlock } from "@/lib/actions/auth-actions"
 import { createClient } from "@/lib/supabase/client"
 
 interface LoginFormProps {
@@ -64,6 +64,23 @@ export function LoginForm({ setAuthView, onLoginSuccessWith2FA, onLoginSuccessWi
   const [showCaptcha, setShowCaptcha] = useState(false)
   const [captchaVerified, setCaptchaVerified] = useState(false)
   const [failedAttempts, setFailedAttempts] = useState(0)
+  
+  // Debug logging for captcha state
+  useEffect(() => {
+    if (showCaptcha) {
+      console.log('🔍 [LOGIN FORM] Captcha state:', { captchaVerified, showCaptcha })
+    }
+  }, [captchaVerified, showCaptcha])
+  
+  // Track login error state
+  const [loginError, setLoginError] = useState<{
+    message: string;
+    type?: 'email_not_found' | 'incorrect_password' | 'account_locked' | 'social_login' | 'other';
+  } | null>(null)
+  
+  // Track account locked state
+  const [isAccountLocked, setIsAccountLocked] = useState(false)
+  const [unlockRequestSent, setUnlockRequestSent] = useState(false)
 
   // Handle social login
   const handleSocialLogin = async (provider: "google" | "facebook" | "twitter") => {
@@ -104,7 +121,52 @@ export function LoginForm({ setAuthView, onLoginSuccessWith2FA, onLoginSuccessWi
       })
     }
   }
+  // Handle account unlock request
+  const handleUnlockRequest = async () => {
+    const email = form.getValues('email')
+    if (!email) {
+      toast({
+        variant: "destructive",
+        title: "Email Required",
+        description: "Please enter your email address to request account unlock.",
+      })
+      return
+    }
+    
+    setIsLoading(true)
+    
+    try {
+      // Call server action to send unlock email
+      const result = await requestAccountUnlock(email)
+      if (result.error) {
+        toast({
+          variant: "destructive",
+          title: "Request Failed",
+          description: result.error,
+        })
+        return
+      }
+      setUnlockRequestSent(true)
+      toast({
+        title: "Unlock Request Sent",
+        description: result.success || `Instructions to unlock your account have been sent to ${email}.`,
+      })
+    } catch (err) {
+      console.error('Error sending unlock request:', err)
+      toast({
+        variant: "destructive",
+        title: "Request Failed",
+        description: "Failed to send unlock request. Please try again later.",
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+  
   const onSubmit = async (data: LoginFormValues) => {
+    // Clear previous error state
+    setLoginError(null)
+    
     const { email, password } = data
     const identifier = `${getClientIdentifier()}-${email.toLowerCase()}`
     
@@ -117,20 +179,20 @@ export function LoginForm({ setAuthView, onLoginSuccessWith2FA, onLoginSuccessWi
         ? new Date(rateLimitCheck.resetTime).toLocaleTimeString()
         : 'later'
       
-      toast({
-        variant: "destructive",
-        title: "Too Many Attempts",
-        description: `Account temporarily locked due to too many failed login attempts. Please try again at ${resetTimeStr}.`,
+      setIsAccountLocked(true)
+      setLoginError({
+        message: `Account temporarily locked due to too many failed login attempts. Please try again at ${resetTimeStr} or request an account unlock.`,
+        type: 'account_locked'
       })
+      
       return
     }
     
     // Check CAPTCHA if required
     if (showCaptcha && !captchaVerified) {
-      toast({
-        variant: "destructive",
-        title: "CAPTCHA Required",
-        description: "Please complete the security verification before continuing.",
+      setLoginError({
+        message: "Please complete the security verification before continuing.",
+        type: 'other'
       })
       return
     }
@@ -147,7 +209,8 @@ export function LoginForm({ setAuthView, onLoginSuccessWith2FA, onLoginSuccessWi
       console.log('🔍 [LOGIN FORM] Server action result:', result)
       
       if (!result.success) {
-        console.error('❌ [LOGIN FORM] Login failed:', result.error)
+        // Use info level for expected login failures instead of error
+        console.info('🔍 [LOGIN FORM] Login attempt failed:', result.error)
         
         // Record failed attempt for rate limiting
         const newRateLimitInfo = authRateLimiter.recordAttempt(identifier)
@@ -164,21 +227,28 @@ export function LoginForm({ setAuthView, onLoginSuccessWith2FA, onLoginSuccessWi
         
         let errorMessage = result.error || "Login failed. Please check your credentials."
         
-        // Add rate limiting context to error message
-        if (newRateLimitInfo.remainingAttempts > 0) {
+        // Preserve the original error message for social login accounts
+        // Only add rate limiting context for incorrect password errors
+        if (result.errorType === 'incorrect_password' && newRateLimitInfo.remainingAttempts > 0) {
           errorMessage += ` (${newRateLimitInfo.remainingAttempts} attempts remaining)`
-        } else if (newRateLimitInfo.isBlocked) {
+        }
+        
+        // Check if account is now locked due to too many attempts
+        if (newRateLimitInfo.isBlocked) {
           const resetTimeStr = newRateLimitInfo.resetTime 
             ? new Date(newRateLimitInfo.resetTime).toLocaleTimeString()
             : 'later'
           errorMessage = `Too many failed attempts. Account locked until ${resetTimeStr}.`
+          setIsAccountLocked(true)
+          result.errorType = 'account_locked'
         }
         
-        toast({
-          variant: "destructive",
-          title: "Authentication Error",
-          description: errorMessage,
+        // Set the login error state with type
+        setLoginError({
+          message: errorMessage,
+          type: result.errorType
         })
+        
         return
       }
       
@@ -203,7 +273,7 @@ export function LoginForm({ setAuthView, onLoginSuccessWith2FA, onLoginSuccessWi
         onLoginSuccessWithout2FA()
       }
     } catch (err) {
-      console.error("Login error:", err)
+      console.info("Login attempt error:", err)
       
       // Record failed attempt for unexpected errors too
       const newRateLimitInfo = authRateLimiter.recordAttempt(identifier)
@@ -230,6 +300,43 @@ export function LoginForm({ setAuthView, onLoginSuccessWith2FA, onLoginSuccessWi
 
   return (
     <div className="space-y-4">
+      {/* Display login error message */}
+      {loginError && (
+        <div className="p-3 border rounded-md bg-destructive/10 text-destructive">
+           {loginError.type === 'account_locked' ? (
+             <div className="flex flex-col items-center text-center">
+               <span className="text-sm font-medium">Too many failed attempts.</span>
+               <span className="text-sm font-medium">{loginError.message.replace('Too many failed attempts. ', '')}</span>
+             </div>
+           ) : (
+             <p className="text-sm font-medium text-center">{loginError.message}</p>
+           )}
+           
+          {/* Show account unlock request option if account is locked */}
+           {isAccountLocked && !unlockRequestSent && (
+            <div className="mt-2 flex justify-center">
+              <Button 
+                type="button" 
+                variant="outline" 
+                size="sm"
+                onClick={handleUnlockRequest}
+                disabled={isLoading}
+                className="text-xs"
+              >
+                {isLoading ? "Sending..." : "Request Account Unlock"}
+              </Button>
+            </div>
+           )}
+          
+          {/* Show confirmation after unlock request is sent */}
+          {unlockRequestSent && (
+            <p className="text-xs mt-2">
+              ✓ Unlock request sent. Please check your email for instructions.
+            </p>
+          )}
+        </div>
+      )}
+      
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           <FormField
@@ -244,6 +351,7 @@ export function LoginForm({ setAuthView, onLoginSuccessWith2FA, onLoginSuccessWi
                     type="email" 
                     {...field} 
                     aria-label="Email address"
+                    disabled={isAccountLocked && unlockRequestSent}
                   />
                 </FormControl>
                 <FormMessage />
@@ -262,6 +370,7 @@ export function LoginForm({ setAuthView, onLoginSuccessWith2FA, onLoginSuccessWi
                     type="password" 
                     {...field} 
                     aria-label="Password"
+                    disabled={isAccountLocked && unlockRequestSent}
                   />
                 </FormControl>
                 <FormMessage />
@@ -273,6 +382,7 @@ export function LoginForm({ setAuthView, onLoginSuccessWith2FA, onLoginSuccessWi
           <Captcha
             isRequired={showCaptcha}
             onVerify={(isValid) => {
+              console.log('🔍 [LOGIN FORM] Captcha verification result:', isValid)
               setCaptchaVerified(isValid)
               if (isValid) {
                 toast({
@@ -287,8 +397,15 @@ export function LoginForm({ setAuthView, onLoginSuccessWith2FA, onLoginSuccessWi
           <Button
             type="submit"
             className="w-full gradient-primary hover:opacity-90"
-            disabled={isLoading || (showCaptcha && !captchaVerified)}
+            disabled={isLoading || (showCaptcha && !captchaVerified) || (isAccountLocked && unlockRequestSent)}
             aria-live="polite"
+            onClick={() => {
+              if (process.env.NODE_ENV !== 'production' && showCaptcha) {
+                // Debug helper to check state before form submission (development only)
+                // eslint-disable-next-line no-console
+                console.log('🔍 [LOGIN FORM] Button clicked, captcha state:', { captchaVerified });
+              }
+            }}
           >
             {isLoading ? "Authenticating..." : "Sign In"}
           </Button>
