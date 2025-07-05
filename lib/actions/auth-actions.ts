@@ -6,30 +6,66 @@ import { cookies } from 'next/headers'
 import { checkExistingAccount, generateSocialLoginErrorMessage } from '@/lib/utils/auth-helpers'
 import { authRateLimiter } from '@/lib/rate-limiter'
 
+// Logging utility for development-only logging
+const logger = {
+  log: (...args: any[]) => {
+    if (process.env.NODE_ENV === 'development') {
+      console.log(...args)
+    }
+  },
+  error: (...args: any[]) => {
+    if (process.env.NODE_ENV === 'development') {
+      console.error(...args)
+    } else {
+      // In production, we might want to log errors to a monitoring service
+      // but without sensitive user data
+      const sanitizedArgs = args.map(arg => {
+        if (typeof arg === 'string') {
+          // Remove emails and other sensitive patterns
+          return arg.replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, '[EMAIL REDACTED]')
+        }
+        return arg
+      })
+      
+      // In a real production environment, you would send this to a proper logging service
+      // For example: sentryCapture(sanitizedArgs)
+    }
+  },
+  warn: (...args: any[]) => {
+    if (process.env.NODE_ENV === 'development') {
+      console.warn(...args)
+    } else {
+      // Similar production handling as with errors
+      // But for warnings
+    }
+  }
+}
+
 // Send account unlock email (uses password reset as unlock mechanism)
 export async function requestAccountUnlock(email: string): Promise<{ error?: string; success?: string }> {
-  console.log(`🔐 [DEBUG] Starting account unlock request for: ${email}`);
+  const maskedEmail = email.replace(/(.{1,3}).*@/, '$1***@');
+  logger.log(`🔐 [DEBUG] Starting account unlock request for: ${maskedEmail}`);
   try {
     // First check if email exists
     const { createServiceRole } = await import('@/lib/supabase/server')
     const supabaseAdmin = await createServiceRole()
-    console.log(`🔐 [DEBUG] Created service role client`);
+    logger.log(`🔐 [DEBUG] Created service role client`);
     
     // Verify user exists using the more efficient checkExistingAccount utility
     const { exists, userId, error: accountError } = await checkExistingAccount(email)
     
     if (accountError) {
-      console.error('🔐 [DEBUG] Error checking user existence:', accountError)
+      logger.error('🔐 [DEBUG] Error checking user existence:', accountError)
       return { error: 'Error verifying account.' }
     }
     
     if (!exists) {
-      console.log('🔐 [DEBUG] No user found with email:', email)
+      logger.log('🔐 [DEBUG] No user found with email:', email)
       // Don't reveal to potential attackers that the email doesn't exist
       return { success: 'If an account with this email exists, unlock instructions have been sent.' }
     }
     
-    console.log(`🔐 [DEBUG] Found user with ID: ${userId}`);
+    logger.log(`🔐 [DEBUG] Found user with ID: ${userId}`);
     
     // Try direct password reset approach instead of generateLink
     const { error } = await supabaseAdmin.auth.resetPasswordForEmail(email, {
@@ -37,14 +73,14 @@ export async function requestAccountUnlock(email: string): Promise<{ error?: str
     })
 
     if (error) {
-      console.error('🔐 [DEBUG] Account unlock email error:', error)
+      logger.error('🔐 [DEBUG] Account unlock email error:', error)
       return { error: error.message }
     }
 
-    console.log('🔐 [DEBUG] Successfully sent password reset email as unlock mechanism');
+    logger.log('🔐 [DEBUG] Successfully sent password reset email as unlock mechanism');
     return { success: 'Account unlock instructions have been sent to your email address.' }
   } catch (err) {
-    console.error('🔐 [DEBUG] Unexpected error during account unlock email:', err)
+    logger.error('🔐 [DEBUG] Unexpected error during account unlock email:', err)
     return { error: 'An unexpected error occurred. Please try again later.' }
   }
 }
@@ -71,7 +107,7 @@ export async function forgotPassword(email: string): Promise<{ error?: string; s
     
     // If there's a different error, log it but continue with standard flow
     if (profileError) {
-      console.warn('Error checking user profile, continuing with standard flow:', profileError)
+      logger.warn('Error checking user profile, continuing with standard flow:', profileError)
     }
 
     // User exists (or we couldn't verify), proceed with password reset using regular client
@@ -81,13 +117,13 @@ export async function forgotPassword(email: string): Promise<{ error?: string; s
     })
 
     if (error) {
-      console.error('Password reset error:', error)
+      logger.error('Password reset error:', error)
       return { error: error.message }
     }
 
     return { success: "Password reset link has been sent to your email address." }
   } catch (err) {
-    console.error('Unexpected error during password reset:', err)
+    logger.error('Unexpected error during password reset:', err)
     return { error: "An unexpected error occurred. Please try again later." }
   }
 }
@@ -120,7 +156,7 @@ export async function signInWithCredentials(credentials: {
     twoFactorMethod?: "authenticator_app" | "sms" | "email"
   }
 }> {
-  console.log('🔍 [AUTH DEBUG] Starting sign-in process for:', credentials.email)
+  logger.log('🔍 [AUTH DEBUG] Starting sign-in process for:', credentials.email)
   
   // Get lock duration from environment variable or use default of 30 minutes
   const envLockDuration = process.env.AUTH_ACCOUNT_LOCK_DURATION_MINUTES
@@ -180,15 +216,14 @@ export async function signInWithCredentials(credentials: {
     }
   }
   
-  console.log('🔍 [AUTH DEBUG] Email existence check:', {
-    exists: matchingUsers.length > 0,
+  logger.log('🔍 [AUTH DEBUG] Email existence check completed:', {
     error: userCheckError ? userCheckError.message : 'None'
   })
   
   // If email doesn't exist, check if it's linked to a social login
   if (matchingUsers.length === 0 && !userCheckError) {
     // Email doesn't exist at all (social login checks already handled earlier)
-    console.log('🔍 [AUTH DEBUG] No matching user found for email:', credentials.email)
+    logger.log('🔍 [AUTH DEBUG] No matching user found for email:', credentials.email)
     return { 
       success: false, 
       error: `No account found with email ${credentials.email}. Please check your email or sign up for a new account.`,
@@ -198,49 +233,63 @@ export async function signInWithCredentials(credentials: {
   
   // Email exists, try to sign in
   const supabase = await createClient()
-  console.log('🔍 [AUTH DEBUG] Supabase client created')
+  logger.log('🔍 [AUTH DEBUG] Supabase client created')
 
   const { data, error } = await supabase.auth.signInWithPassword({
     email: credentials.email,
     password: credentials.password,
   })
 
-  console.log('🔍 [AUTH DEBUG] Sign-in attempt result:')
-  console.log('   - Error:', error ? error.message : 'None')
-  console.log('   - User exists:', !!data.user)
-  console.log('   - Session exists:', !!data.session)
+  logger.log('🔍 [AUTH DEBUG] Sign-in attempt result:')
+  logger.log('   - Error:', error ? error.message : 'None')
+  logger.log('   - User exists:', !!data.user)
+  logger.log('   - Session exists:', !!data.session)
 
+  // Define known error patterns for better maintainability
+  const ERROR_PATTERNS = {
+    INVALID_CREDENTIALS: {
+      codes: ['401', 'invalid_grant'],
+      messages: ['Invalid login credentials', 'Invalid user credentials']
+    },
+    RATE_LIMITED: {
+      codes: ['429'],
+      messages: ['rate limited', 'too many requests']
+    }
+  }
+  
   if (error) {
-    console.error('❌ [AUTH DEBUG] Sign-in error:', error)
+    logger.error('❌ [AUTH DEBUG] Sign-in error:', error)
 
+    // Helper function to check error against known patterns
+    const matchesErrorPattern = (err: any, pattern: {codes: string[], messages: string[]}) => {
+      // Check for error code match
+      if (err.code && pattern.codes.some(code => err.code.toString().includes(code))) {
+        return true
+      }
+      // Check for message match as fallback
+      if (err.message && pattern.messages.some(msg => err.message.toLowerCase().includes(msg.toLowerCase()))) {
+        return true
+      }
+      return false
+    }
+    
     // Handle invalid credentials specially to track failed attempts
-    if (error.message.includes('Invalid login credentials')) {
+    if (matchesErrorPattern(error, ERROR_PATTERNS.INVALID_CREDENTIALS)) {
       // We already have matchingUsers, so use the first one
-      if (matchingUsers.length > 0) {
-        const user = matchingUsers[0]!
+      if (matchingUsers.length > 0 && matchingUsers[0]) {
+        const user = matchingUsers[0]
         const userIdentifier = `login_attempt_${user.id}`
         const currentFailed = user.user_metadata?.failed_attempts ?? 0
         const newFailed = currentFailed + 1
         const MAX_FAILED_ATTEMPTS = 5
         
         /**
-         * Intelligent database write batching strategy to balance security and performance:
+         * Batching Strategy for Failed Login Metadata Updates
          * 
-         * This approach minimizes database writes during potential brute force attacks while
-         * maintaining essential security tracking. Database updates occur ONLY on specific
-         * conditions rather than on every failed login attempt.
+         * Implements intelligent batching to reduce database writes while maintaining security.
+         * Updates occur on: first attempt, lock threshold, every 3rd attempt, and hourly fallback.
          * 
-         * Update conditions:
-         * 1. First attempt (currentFailed === 0): Always record the first failure to establish a baseline
-         * 2. Lock threshold (newFailed === MAX_FAILED_ATTEMPTS): Critical security threshold that triggers account locking
-         * 3. Periodic updates (newFailed % 3 === 0): Every third failure between attempts 1-4 to track progression
-         * 4. Time-based fallback (hourly): Ensures tracking of persistent attempts even if they're spread out
-         *
-         * Benefits:
-         * - Reduces database load during attack scenarios by up to 80%
-         * - Maintains accurate security state at critical thresholds
-         * - Provides adequate audit trail while optimizing performance
-         * - Prevents database flooding during distributed brute force attempts
+         * See docs/authentication-batching-strategy.md for detailed implementation and benefits.
          */
         const shouldUpdateDatabase = 
           // 1. First failed attempt - always record to establish a baseline
@@ -326,26 +375,26 @@ export async function signInWithCredentials(credentials: {
   }
 
   if (!data.user) {
-    console.error('❌ [AUTH DEBUG] No user returned from sign-in')
+    logger.error('❌ [AUTH DEBUG] No user returned from sign-in')
     return { success: false, error: "Invalid email or password." }
   }
 
-  console.log('✅ [AUTH DEBUG] User signed in successfully:')
-  console.log('   - User ID:', data.user.id)
-  console.log('   - Email:', data.user.email)
-  console.log('   - Email confirmed:', data.user.email_confirmed_at)
-  console.log('   - Session access token:', data.session?.access_token ? 'Present' : 'Missing')
-  console.log('   - Session expires at:', data.session?.expires_at)
+  logger.log('✅ [AUTH DEBUG] User signed in successfully:')
+  logger.log('   - User ID:', data.user.id)
+  logger.log('   - Email:', data.user.email)
+  logger.log('   - Email confirmed:', data.user.email_confirmed_at)
+  logger.log('   - Session access token:', data.session?.access_token ? 'Present' : 'Missing')
+  logger.log('   - Session expires at:', data.session?.expires_at)
 
   // Check session immediately after sign-in
   const { data: { session: currentSession }, error: sessionError } = await supabase.auth.getSession()
-  console.log('🔍 [AUTH DEBUG] Session check after sign-in:')
-  console.log('   - Session error:', sessionError ? sessionError.message : 'None')
-  console.log('   - Current session exists:', !!currentSession)
-  console.log('   - Session user ID:', currentSession?.user?.id)
+  logger.log('🔍 [AUTH DEBUG] Session check after sign-in:')
+  logger.log('   - Session error:', sessionError ? sessionError.message : 'None')
+  logger.log('   - Current session exists:', !!currentSession)
+  logger.log('   - Session user ID:', currentSession?.user?.id)
 
   // Get additional user profile data
-  console.log('🔍 [AUTH DEBUG] Fetching user profile...')
+  logger.log('🔍 [AUTH DEBUG] Fetching user profile...')
   const { data: profile, error: profileError } = await supabase
     .from('users')
     .select('name, role, org_id')
@@ -353,16 +402,16 @@ export async function signInWithCredentials(credentials: {
     .single()
 
   if (profileError) {
-    console.error('❌ [AUTH DEBUG] Error fetching user profile:', profileError)
+    logger.error('❌ [AUTH DEBUG] Error fetching user profile:', profileError)
     // Still allow login even if profile fetch fails
   } else {
-    console.log('✅ [AUTH DEBUG] Profile fetched successfully:')
-    console.log('   - Name:', profile.name)
-    console.log('   - Role:', profile.role)
-    console.log('   - Org ID:', profile.org_id)
+    logger.log('✅ [AUTH DEBUG] Profile fetched successfully:')
+    logger.log('   - Name:', profile.name)
+    logger.log('   - Role:', profile.role)
+    logger.log('   - Org ID:', profile.org_id)
   }
 
-  console.log('✅ [AUTH DEBUG] Sign-in action completed successfully')
+  logger.log('✅ [AUTH DEBUG] Sign-in action completed successfully')
 
   return {
     success: true,

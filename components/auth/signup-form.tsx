@@ -1,10 +1,12 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { EyeIcon, EyeOffIcon } from "lucide-react"
+import { Progress } from "@/components/ui/progress"
 import type { Dispatch, SetStateAction } from "react"
 import type { AuthView } from "@/types/auth" 
 import { signUpWithCredentials } from "@/lib/actions/auth-actions"
@@ -13,10 +15,93 @@ interface SignupFormProps {
   setAuthView: Dispatch<SetStateAction<AuthView>> 
 }
 
+// Password validation criteria
+const PASSWORD_MIN_LENGTH = 8;
+const HAS_LOWERCASE = /[a-z]/;
+const HAS_UPPERCASE = /[A-Z]/;
+const HAS_NUMBER = /[0-9]/;
+const HAS_SYMBOL = /[^A-Za-z0-9]/;
+
+// Password strength calculation
+const calculatePasswordStrength = (password: string): number => {
+  if (!password) return 0;
+
+  let strength = 0;
+  if (password.length >= PASSWORD_MIN_LENGTH) strength += 20;
+  if (HAS_LOWERCASE.test(password)) strength += 20;
+  if (HAS_UPPERCASE.test(password)) strength += 20;
+  if (HAS_NUMBER.test(password)) strength += 20;
+  if (HAS_SYMBOL.test(password)) strength += 20;
+
+  return strength; // 0 - 100 scale
+};
+
+// Get feedback message based on strength
+const getPasswordFeedback = (password: string): { message: string; color: string; variant: 'weak' | 'moderate' | 'strong' | 'default' } => {
+  if (!password) return { message: '', color: 'text-muted-foreground', variant: 'default' };
+
+  const missing: string[] = [];
+  if (password.length < PASSWORD_MIN_LENGTH) missing.push('8+ characters');
+  if (!HAS_LOWERCASE.test(password)) missing.push('lowercase letter');
+  if (!HAS_UPPERCASE.test(password)) missing.push('uppercase letter');
+  if (!HAS_NUMBER.test(password)) missing.push('number');
+  if (!HAS_SYMBOL.test(password)) missing.push('symbol');
+
+  const strength = calculatePasswordStrength(password);
+
+  if (missing.length === 0) {
+    return {
+      message: 'Strong: Excellent password',
+      color: 'text-green-500',
+      variant: 'strong'
+    };
+  }
+
+  // Build helpful feedback message
+  const message = `Add ${missing.join(', ')}`;
+
+  if (strength < 40) {
+    return {
+      message,
+      color: 'text-destructive',
+      variant: 'weak'
+    };
+  }
+
+  return {
+    message,
+    color: 'text-yellow-500',
+    variant: 'moderate'
+  };
+};
+
+// Is password valid according to requirements
+const isPasswordValid = (password: string): boolean => {
+  return password.length >= PASSWORD_MIN_LENGTH &&
+    HAS_LOWERCASE.test(password) && 
+    HAS_UPPERCASE.test(password) &&
+    HAS_NUMBER.test(password) && 
+    HAS_SYMBOL.test(password);
+};
+
 export function SignupForm({ setAuthView }: SignupFormProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
+  const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  
+  // Password strength state
+  const [passwordStrength, setPasswordStrength] = useState(0)
+  const [passwordFeedback, setPasswordFeedback] = useState<{ message: string; color: string; variant: 'weak' | 'moderate' | 'strong' | 'default' }>({ message: '', color: 'text-muted-foreground', variant: 'default' })
+
+  // Update password strength when password changes
+  useEffect(() => {
+    setPasswordStrength(calculatePasswordStrength(password));
+    setPasswordFeedback(getPasswordFeedback(password));
+  }, [password]);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -33,6 +118,13 @@ export function SignupForm({ setAuthView }: SignupFormProps) {
     // Validate passwords match
     if (password !== confirmPassword) {
       setError("Passwords do not match")
+      setLoading(false)
+      return
+    }
+    
+    // Validate password strength (use FormData password for consistency)
+    if (!isPasswordValid(password)) {
+      setError("Password must be at least 8 characters and include uppercase, lowercase, number, and symbol characters")
       setLoading(false)
       return
     }
@@ -103,11 +195,61 @@ export function SignupForm({ setAuthView }: SignupFormProps) {
         </div>
         <div>
           <Label htmlFor="password">Password</Label>
-          <Input id="password" name="password" type="password" required />
+          <div className="relative">
+            <Input 
+              id="password" 
+              name="password" 
+              type={showPassword ? "text" : "password"} 
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required 
+            />
+            <button 
+              type="button"
+              aria-label={showPassword ? "Hide password" : "Show password"}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+              onClick={() => setShowPassword(!showPassword)}
+              tabIndex={-1}
+            >
+              {showPassword ? <EyeOffIcon size={16} /> : <EyeIcon size={16} />}
+            </button>
+          </div>
+          
+          {/* Password strength meter */}
+          {password && (
+            <div className="mt-2 space-y-1">
+              <Progress 
+                value={passwordStrength} 
+                className="h-1" 
+                variant={passwordFeedback.variant}
+              />
+              <p className={`text-xs ${passwordFeedback.color}`}>
+                {passwordFeedback.message}
+              </p>
+            </div>
+          )}
         </div>
         <div>
           <Label htmlFor="confirmPassword">Confirm Password</Label>
-          <Input id="confirmPassword" name="confirmPassword" type="password" required />
+          <div className="relative">
+            <Input 
+              id="confirmPassword" 
+              name="confirmPassword" 
+              type={showConfirmPassword ? "text" : "password"}
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              required 
+            />
+            <button 
+              type="button"
+              aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              tabIndex={-1}
+            >
+              {showConfirmPassword ? <EyeOffIcon size={16} /> : <EyeIcon size={16} />}
+            </button>
+          </div>
         </div>
         <Button type="submit" className="w-full gradient-primary hover:opacity-90" disabled={loading}>
           {loading ? "Creating Account..." : "Create Account"}
