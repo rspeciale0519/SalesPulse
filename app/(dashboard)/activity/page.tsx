@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -18,10 +18,11 @@ const ActivityLog = () => {
   // Initialize focus preservation
   useEnhancedInput()
 
-  // TODO: Fetch activities from Supabase
-  // const { data: activities, loading } = useActivities(userId)
-  // Will be replaced with actual data from the activities table
-  const [activities] = useState([])
+  const [activities, setActivities] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
 
   // Simple string state
   const [formData, setFormData] = useState({
@@ -34,6 +35,41 @@ const ActivityLog = () => {
   const updateFormData = useCallback((key: string, value: string) => {
     setFormData((prev) => ({ ...prev, [key]: value }))
   }, [])
+
+  // Fetch activities on mount
+  useEffect(() => {
+    async function fetchActivities() {
+      try {
+        setLoading(true)
+        const response = await fetch('/api/activities?limit=50')
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch activities')
+        }
+
+        const data = await response.json()
+        setActivities(data.activities || [])
+      } catch (err) {
+        console.error('Error fetching activities:', err)
+        setError('Failed to load activities')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchActivities()
+  }, [])
+
+  // Map UI values to database values
+  const mapActivityType = (uiType: string): string => {
+    const typeMap: Record<string, string> = {
+      calls: 'call',
+      appointments: 'appointment',
+      deals: 'deal',
+      referrals: 'referral',
+    }
+    return typeMap[uiType] || uiType
+  }
 
   const getInputClasses = useCallback(() => {
     return actualTheme === "dark"
@@ -51,15 +87,42 @@ const ActivityLog = () => {
     return "glass glass-hover rounded-xl gradient-border"
   }, [])
 
-  const handleSubmit = useCallback(() => {
+  const handleSubmit = useCallback(async () => {
     const countNum = Number.parseInt(formData.count) || 0
-    if (formData.activityType && countNum > 0 && formData.date) {
-      console.log("Adding activity:", {
-        type: formData.activityType,
-        count: countNum,
-        date: formData.date,
-        notes: formData.notes,
+    if (!formData.activityType || countNum <= 0 || !formData.date) {
+      setError('Please fill in all required fields')
+      return
+    }
+
+    try {
+      setSaving(true)
+      setError(null)
+      setSuccess(null)
+
+      const response = await fetch('/api/activities', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          activity_type: mapActivityType(formData.activityType),
+          activity_date: formData.date,
+          quantity: countNum,
+          notes: formData.notes || null,
+        }),
       })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to save activity')
+      }
+
+      const { activity } = await response.json()
+      console.log('Activity saved:', activity)
+
+      // Add the new activity to the list
+      setActivities((prev: any[]) => [activity, ...prev])
+
       // Reset form
       setFormData({
         activityType: "",
@@ -67,8 +130,19 @@ const ActivityLog = () => {
         date: "",
         notes: "",
       })
+
+      setSuccess('Activity logged successfully!')
+
+      // Clear success message after 3 seconds
+      setTimeout(() => setSuccess(null), 3000)
+
+    } catch (err: any) {
+      console.error('Error saving activity:', err)
+      setError(err.message || 'Failed to save activity')
+    } finally {
+      setSaving(false)
     }
-  }, [formData])
+  }, [formData, mapActivityType])
 
   return (
     <div className="space-y-6">
@@ -76,6 +150,19 @@ const ActivityLog = () => {
         <FileText className="h-8 w-8 text-blue-500" />
         <h1 className="text-3xl font-bold text-theme-primary">Activity Log</h1>
       </div>
+
+      {/* Success/Error Messages */}
+      {success && (
+        <div className="rounded-xl p-4 bg-green-500/10 border border-green-500/20">
+          <p className="text-green-400 font-medium">{success}</p>
+        </div>
+      )}
+
+      {error && (
+        <div className="rounded-xl p-4 bg-red-500/10 border border-red-500/20">
+          <p className="text-red-400 font-medium">{error}</p>
+        </div>
+      )}
 
       {/* Entry Form */}
       <Card className={`${getCardClasses()} hover:shadow-lg transition-all duration-200`}>
@@ -139,9 +226,13 @@ const ActivityLog = () => {
           </div>
 
           <div className="flex justify-end mt-6">
-            <Button className="gradient-primary hover:opacity-90" onClick={handleSubmit}>
+            <Button
+              className="gradient-primary hover:opacity-90"
+              onClick={handleSubmit}
+              disabled={saving}
+            >
               <Plus className="h-4 w-4 mr-2" />
-              Add Activity
+              {saving ? 'Saving...' : 'Add Activity'}
             </Button>
           </div>
         </CardContent>
