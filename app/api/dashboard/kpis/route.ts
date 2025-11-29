@@ -147,12 +147,16 @@ export async function GET() {
 
     console.log('🎯 [DASHBOARD KPIs] Current goal:', currentGoal)
 
-    // Calculate targets based on goal (simplified for now - will need SIM-specific calculations later)
-    // For now, we'll use placeholder values or calculate basic targets
+    // Extract targets from goal's calculated_metrics
     const targetAmount = currentGoal?.target_amount || 0
-    const callsTarget = 50 // Placeholder - should come from SIM calculations
-    const dealsTarget = 5 // Placeholder
-    const appointmentsTarget = 10 // Placeholder
+    const calculatedMetrics = currentGoal?.calculated_metrics || {}
+
+    // Use pre-calculated metrics from goal if available, otherwise use defaults
+    const callsTarget = calculatedMetrics.dailyCalls || 50
+    const dealsTargetWeekly = calculatedMetrics.weeklyDeals || 5
+    const appointmentsTarget = calculatedMetrics.dailyAppointmentsSet || 10
+
+    console.log('📊 [DASHBOARD KPIs] Targets from goal:', { callsTarget, dealsTargetWeekly, appointmentsTarget })
 
     // Fetch recent activities (last 10)
     const { data: recentActivities, error: recentError } = await supabase
@@ -178,12 +182,12 @@ export async function GET() {
       },
       dealsThisWeek: {
         actual: dealsThisWeekCount,
-        target: dealsTarget,
-        progress: dealsTarget > 0 ? Math.round((dealsThisWeekCount / dealsTarget) * 100) : 0,
+        target: dealsTargetWeekly,
+        progress: dealsTargetWeekly > 0 ? Math.round((dealsThisWeekCount / dealsTargetWeekly) * 100) : 0,
       },
       incomeThisMonth: {
         actual: 0, // TODO: Calculate from deals and SIM-specific commission rates
-        target: targetAmount,
+        target: targetAmount / 12, // Monthly target from annual goal
         progress: 0,
       },
       appointmentsSet: {

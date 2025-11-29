@@ -1,11 +1,11 @@
 "use client"
 
-import { useState, useMemo, useCallback } from "react"
+import { useState, useMemo, useCallback, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
-import { Calculator, Target, DollarSign, TrendingUp, Calendar, Phone, Users } from "lucide-react"
+import { Calculator, Target, DollarSign, TrendingUp, Calendar, Phone, Users, Save, RefreshCw } from "lucide-react"
 import { useTheme } from "@/components/theme-provider"
 import { BulletproofInput } from "@/components/bulletproof-input"
 import { useEnhancedInput } from "@/hooks/use-enhanced-input"
@@ -13,6 +13,13 @@ import { useEnhancedInput } from "@/hooks/use-enhanced-input"
 const GoalsCalculator = () => {
   const { actualTheme } = useTheme()
   useEnhancedInput()
+
+  // API state
+  const [currentGoalId, setCurrentGoalId] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
 
   // Complete state with all fields from spreadsheet
   const [values, setValues] = useState({
@@ -205,12 +212,174 @@ const GoalsCalculator = () => {
     setWhatIfValues({ ...values })
   }, [values])
 
+  // Load current goal on mount
+  useEffect(() => {
+    async function loadCurrentGoal() {
+      try {
+        setLoading(true)
+        const response = await fetch('/api/goals?current=true')
+
+        if (!response.ok) {
+          throw new Error('Failed to load goal')
+        }
+
+        const data = await response.json()
+
+        if (data.goals && data.goals.length > 0) {
+          const goal = data.goals[0]
+          setCurrentGoalId(goal.id)
+
+          // Load goal config into values
+          if (goal.goal_config && Object.keys(goal.goal_config).length > 0) {
+            setValues({
+              grossIncome: String(goal.target_amount || 100000),
+              ...goal.goal_config,
+            })
+            setWhatIfValues({
+              grossIncome: String(goal.target_amount || 100000),
+              ...goal.goal_config,
+            })
+          } else {
+            // If no config, just set the target amount
+            updateValue('grossIncome', String(goal.target_amount || 100000))
+          }
+
+          console.log('✅ Loaded goal:', goal.id)
+        } else {
+          console.log('ℹ️ No current goal found')
+        }
+      } catch (err) {
+        console.error('Error loading goal:', err)
+        setError('Failed to load current goal')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadCurrentGoal()
+  }, [])
+
+  // Save or update goal
+  const saveGoal = useCallback(async () => {
+    try {
+      setSaving(true)
+      setError(null)
+      setSuccess(null)
+
+      // Calculate start and end dates (current year)
+      const startDate = new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0] // Jan 1
+      const endDate = new Date(new Date().getFullYear(), 11, 31).toISOString().split('T')[0] // Dec 31
+
+      const goalData = {
+        target_amount: parseFloat(values.grossIncome) || 0,
+        start_date: startDate,
+        end_date: endDate,
+        goal_config: {
+          reinvestmentPercent: values.reinvestmentPercent,
+          incomePerDeal: values.incomePerDeal,
+          takenRate: values.takenRate,
+          closeRate: values.closeRate,
+          showRate: values.showRate,
+          callBookRate: values.callBookRate,
+          daysPerWeek: values.daysPerWeek,
+          weeksPerYear: values.weeksPerYear,
+          dealReferralPercent: values.dealReferralPercent,
+          otherReferralSources: values.otherReferralSources,
+          referralSitRate: values.referralSitRate,
+          referralCloseRate: values.referralCloseRate,
+          actualCallsMade: values.actualCallsMade,
+          actualDealsClosedL: values.actualDealsClosedL,
+        },
+        calculated_metrics: {
+          netIncome: currentMetrics.netIncome,
+          dealsNeeded: currentMetrics.dealsNeeded,
+          appointmentsRun: currentMetrics.appointmentsRun,
+          appointmentsSet: currentMetrics.appointmentsSet,
+          callsNeeded: currentMetrics.callsNeeded,
+          dailyDeals: currentMetrics.dailyDeals,
+          weeklyDeals: currentMetrics.weeklyDeals,
+          dailyAppointmentsRun: currentMetrics.dailyAppointmentsRun,
+          weeklyAppointmentsRun: currentMetrics.weeklyAppointmentsRun,
+          dailyAppointmentsSet: currentMetrics.dailyAppointmentsSet,
+          weeklyAppointmentsSet: currentMetrics.weeklyAppointmentsSet,
+          dailyCalls: currentMetrics.dailyCalls,
+          weeklyCalls: currentMetrics.weeklyCalls,
+        },
+      }
+
+      let response
+      if (currentGoalId) {
+        // Update existing goal
+        response = await fetch(`/api/goals/${currentGoalId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(goalData),
+        })
+      } else {
+        // Create new goal
+        response = await fetch('/api/goals', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(goalData),
+        })
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to save goal')
+      }
+
+      const { goal } = await response.json()
+      setCurrentGoalId(goal.id)
+      setSuccess(currentGoalId ? 'Goal updated successfully!' : 'Goal saved successfully!')
+
+      // Clear success message after 3 seconds
+      setTimeout(() => setSuccess(null), 3000)
+
+    } catch (err: any) {
+      console.error('Error saving goal:', err)
+      setError(err.message || 'Failed to save goal')
+    } finally {
+      setSaving(false)
+    }
+  }, [values, currentMetrics, currentGoalId])
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <Calculator className="h-8 w-8 text-blue-400" />
-        <h1 className="text-3xl font-bold text-theme-primary">Goals Calculator</h1>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Calculator className="h-8 w-8 text-blue-400" />
+          <h1 className="text-3xl font-bold text-theme-primary">Goals Calculator</h1>
+        </div>
+        <Button
+          onClick={saveGoal}
+          disabled={saving || loading}
+          className="gradient-primary hover:opacity-90"
+        >
+          <Save className="h-4 w-4 mr-2" />
+          {saving ? 'Saving...' : currentGoalId ? 'Update Goal' : 'Save Goal'}
+        </Button>
       </div>
+
+      {/* Success/Error Messages */}
+      {success && (
+        <div className="rounded-xl p-4 bg-green-500/10 border border-green-500/20">
+          <p className="text-green-400 font-medium">{success}</p>
+        </div>
+      )}
+
+      {error && (
+        <div className="rounded-xl p-4 bg-red-500/10 border border-red-500/20">
+          <p className="text-red-400 font-medium">{error}</p>
+        </div>
+      )}
+
+      {/* Loading State */}
+      {loading && (
+        <div className="text-center py-4">
+          <p className="text-theme-secondary">Loading goal configuration...</p>
+        </div>
+      )}
 
       <Tabs defaultValue="my-goals" className="space-y-6">
         <TabsList className="glass border-zinc-700">
